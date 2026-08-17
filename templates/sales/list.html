@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% import "partials/icons.html" as icons %}
+{% block title %}Sales - Business Tracker{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Sales</h1>
+    <div class="page-subtitle">{{ sales | length }} order(s)</div>
+  </div>
+  <a href="{{ url_for('sales.add_sale') }}" class="btn">+ Add Sale</a>
+</div>
+
+<form class="filter-bar" method="get">
+  <input type="text" name="q" placeholder="Search by customer..." value="{{ search }}">
+  <select name="customer_id">
+    <option value="">All Customers</option>
+    {% for c in customers %}<option value="{{ c.id }}" {{ 'selected' if customer_id == c.id }}>{{ c.name }}</option>{% endfor %}
+  </select>
+  <select name="product_id">
+    <option value="">All Products</option>
+    {% for p in products %}<option value="{{ p.id }}" {{ 'selected' if product_id == p.id }}>{{ p.name }}</option>{% endfor %}
+  </select>
+  <select name="status">
+    <option value="">All Payment Statuses</option>
+    {% for s in ['Paid', 'Partially Paid', 'Pending'] %}
+    <option value="{{ s }}" {{ 'selected' if status == s }}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <select name="delivery">
+    <option value="">All Deliveries</option>
+    <option value="Pending" {{ 'selected' if delivery == 'Pending' }}>To deliver</option>
+    <option value="overdue" {{ 'selected' if delivery == 'overdue' }}>Overdue</option>
+    <option value="Delivered" {{ 'selected' if delivery == 'Delivered' }}>Delivered</option>
+  </select>
+  <input type="date" name="start" value="{{ start or '' }}">
+  <input type="date" name="end" value="{{ end or '' }}">
+  {{ icons.search_button("Search and filter sales") }}
+  <a href="{{ url_for('sales.list_sales') }}" class="btn btn-secondary btn-sm">Clear</a>
+</form>
+
+<div class="panel">
+  {% if sales %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Date</th><th>Order</th><th>Customer</th><th>Products</th><th>Total</th><th>Paid</th><th>Pending</th><th>Payment</th><th>Delivery</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for s in sales %}
+        <tr>
+          <td>{{ s.order_date }}</td>
+          <td>#{{ s.id }}</td>
+          <td>{{ s.customer.name if s.customer else '-' }}</td>
+          <td>{{ s.items.count() }} item(s)</td>
+          <td>{{ s.total_amount | currency }}</td>
+          <td>{{ s.amount_paid | currency }}</td>
+          <td>{{ s.remaining_amount | currency }}</td>
+          <td>
+            {% if s.payment_status == 'Paid' %}<span class="badge badge-paid">Paid</span>
+            {% elif s.payment_status == 'Partially Paid' %}<span class="badge badge-partial">Partially Paid</span>
+            {% else %}<span class="badge badge-pending">Pending</span>{% endif %}
+          </td>
+          <td>
+            {% if s.is_delivered %}
+              <span class="badge badge-paid">Delivered</span>
+            {% elif s.is_delivery_overdue %}
+              <span class="badge badge-pending">Overdue</span>
+            {% else %}
+              <span class="badge badge-partial">To deliver</span>
+            {% endif %}
+            {% if s.delivery_date %}<div class="delivery-date">{{ s.delivery_date }}</div>{% endif %}
+          </td>
+          <td class="row-actions">
+            {% if not s.is_delivered %}
+            <form method="post" action="{{ url_for('sales.mark_delivered', sale_id=s.id) }}">
+              <button class="btn btn-secondary btn-sm" type="submit">Mark delivered</button>
+            </form>
+            {% endif %}
+            <a href="{{ url_for('sales.view_sale', sale_id=s.id) }}" class="btn btn-secondary btn-sm">View</a>
+            <a href="{{ url_for('sales.edit_sale', sale_id=s.id) }}" class="btn btn-secondary btn-sm">Edit</a>
+            <form method="post" action="{{ url_for('sales.delete_sale', sale_id=s.id) }}" data-confirm="Delete this order?">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">No sales yet. Record your first sale to get started.</div>
+  {% endif %}
+</div>
+{% endblock %}

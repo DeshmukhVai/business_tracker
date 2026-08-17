@@ -1,0 +1,70 @@
+{% import "partials/icons.html" as icons %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Business Tracker{% endblock %}</title>
+{% include "partials/favicon.html" %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+{# Chart.js is served from this project rather than a CDN: the CDN URL that
+   used to be here 404'd (cdnjs never published 4.4.4), which silently left
+   every dashboard chart blank. A local copy also works offline. #}
+<script src="{{ url_for('static', filename='js/vendor/chart.umd.min.js') }}"></script>
+</head>
+<body>
+<button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">&#9776;</button>
+
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <span class="brand-icon">💼</span>
+      <span class="brand-name">Business Tracker</span>
+    </div>
+    <nav class="nav-menu">
+      <a href="{{ url_for('dashboard.index') }}" class="{{ 'active' if request.endpoint == 'dashboard.index' }}">📊 Dashboard</a>
+      <a href="{{ url_for('sales.list_sales') }}" class="{{ 'active' if request.blueprint == 'sales' }}">🧾 Sales</a>
+      <a href="{{ url_for('customers.list_customers') }}" class="{{ 'active' if request.blueprint == 'customers' }}">👥 Customers</a>
+      <a href="{{ url_for('products.list_products') }}" class="{{ 'active' if request.blueprint == 'products' }}">📦 Products</a>
+      <a href="{{ url_for('expenses.list_expenses') }}" class="{{ 'active' if request.blueprint == 'expenses' }}">💸 Expenses</a>
+      <a href="{{ url_for('payments.list_pending') }}" class="{{ 'active' if request.blueprint == 'payments' }}">⏳ Pending Payments</a>
+      <a href="{{ url_for('reports.index') }}" class="{{ 'active' if request.blueprint == 'reports' }}">📈 Reports</a>
+      <a href="{{ url_for('settings.index') }}" class="{{ 'active' if request.blueprint == 'settings' }}">⚙️ Settings</a>
+    </nav>
+  </aside>
+
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <main class="main-content">
+    {% if current_user %}
+    <header class="topbar">
+      <div class="topbar-account">
+        <span class="account-avatar">{{ current_user.username[0] | upper }}</span>
+        <span class="account-name">{{ current_user.username }}</span>
+        <form method="post" action="{{ url_for('auth.logout') }}">
+          <button class="btn btn-secondary btn-sm" type="submit" title="Sign out">
+            {{ icons.sign_out() }} Sign out
+          </button>
+        </form>
+      </div>
+    </header>
+    {% endif %}
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

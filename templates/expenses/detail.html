@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Expense #{{ expense.id }} - Business Tracker{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <a href="{{ url_for('expenses.list_expenses') }}" class="back-link">&larr; All Expenses</a>
+    <h1>{{ expense.category }}</h1>
+    <div class="page-subtitle">{{ expense.expense_date }}{% if expense.description %} · {{ expense.description }}{% endif %}</div>
+  </div>
+  <a href="{{ url_for('expenses.edit_expense', expense_id=expense.id) }}" class="btn btn-secondary">Edit</a>
+</div>
+
+<div class="detail-grid">
+  <div class="detail-item"><div class="label">Total Amount</div><div class="value">{{ expense.amount | currency }}</div></div>
+  <div class="detail-item"><div class="label">Category</div><div class="value">{{ expense.category }}</div></div>
+  <div class="detail-item"><div class="label">Payment Method</div><div class="value">{{ expense.payment_method or '-' }}</div></div>
+  <div class="detail-item"><div class="label">Items Noted</div><div class="value">{{ expense.item_count or '-' }}</div></div>
+</div>
+
+<div class="panel">
+  <h3>Raw Materials / Items</h3>
+  {% set rows = expense.item_list %}
+  {% if rows %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Item</th><th>Qty</th><th>Price per unit</th></tr></thead>
+      <tbody>
+        {% for item in rows %}
+        <tr>
+          <td>{{ item.name }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>{{ item.unit_price | currency }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    This expense was recorded as a single amount, with no item breakdown.
+    <a href="{{ url_for('expenses.edit_expense', expense_id=expense.id) }}">Add one</a>.
+  </div>
+  {% endif %}
+  {% if expense.notes %}<p><strong>Notes:</strong> {{ expense.notes }}</p>{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Pending Payments - Business Tracker{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Pending Payments</h1>
+    <div class="page-subtitle">Total Pending: {{ total_pending | currency }}</div>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <span style="font-size:0.85rem; color:var(--color-text-muted);">Sort by:</span>
+  <a href="{{ url_for('payments.list_pending', sort='highest') }}" class="btn btn-secondary btn-sm {{ 'active' if sort_by == 'highest' }}">Highest Pending</a>
+  <a href="{{ url_for('payments.list_pending', sort='oldest') }}" class="btn btn-secondary btn-sm {{ 'active' if sort_by == 'oldest' }}">Oldest</a>
+  <a href="{{ url_for('payments.list_pending', sort='customer') }}" class="btn btn-secondary btn-sm {{ 'active' if sort_by == 'customer' }}">Customer Name</a>
+</div>
+
+<div class="panel">
+  <h3>By Order</h3>
+  {% if sales %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Customer</th><th>Order</th><th>Date</th><th>Total</th><th>Paid</th><th>Pending</th><th>Record Payment</th></tr></thead>
+      <tbody>
+        {% for s in sales %}
+        <tr>
+          <td>{{ s.customer.name if s.customer else '-' }}</td>
+          <td><a href="{{ url_for('sales.view_sale', sale_id=s.id) }}">#{{ s.id }}</a></td>
+          <td>{{ s.order_date }}</td>
+          <td>{{ s.total_amount | currency }}</td>
+          <td>{{ s.amount_paid | currency }}</td>
+          <td><strong>{{ s.remaining_amount | currency }}</strong></td>
+          <td>
+            <form method="post" action="{{ url_for('sales.record_payment', sale_id=s.id) }}" style="display:flex; gap:6px;">
+              <input type="number" name="amount" step="0.01" min="0.01" max="{{ s.remaining_amount }}" placeholder="Amount" required style="width:100px; padding:6px; border-radius:6px; border:1px solid var(--color-border);">
+              <button class="btn btn-sm" type="submit">Add</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">Nice — no pending payments right now.</div>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h3>By Customer</h3>
+  {% if customer_totals %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Customer</th><th>Pending Amount</th></tr></thead>
+      <tbody>
+        {% for row in customer_totals %}
+        <tr>
+          <td><a href="{{ url_for('customers.view_customer', customer_id=row.customer.id) }}">{{ row.customer.name }}</a></td>
+          <td>{{ row.pending | currency }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">No pending customer balances.</div>
+  {% endif %}
+</div>
+{% endblock %}

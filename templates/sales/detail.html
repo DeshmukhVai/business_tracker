@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Order #{{ sale.id }} - Business Tracker{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <a href="{{ url_for('sales.list_sales') }}" class="back-link">&larr; All Sales</a>
+    <h1>Order #{{ sale.id }}</h1>
+    <div class="page-subtitle">{{ sale.order_date }} · {{ sale.customer.name if sale.customer }}</div>
+  </div>
+  <a href="{{ url_for('sales.edit_sale', sale_id=sale.id) }}" class="btn btn-secondary">Edit</a>
+</div>
+
+<div class="detail-grid">
+  <div class="detail-item"><div class="label">Total Amount</div><div class="value">{{ sale.total_amount | currency }}</div></div>
+  <div class="detail-item"><div class="label">Amount Paid</div><div class="value">{{ sale.amount_paid | currency }}</div></div>
+  <div class="detail-item"><div class="label">Pending</div><div class="value">{{ sale.remaining_amount | currency }}</div></div>
+  <div class="detail-item"><div class="label">Estimated Profit</div><div class="value">{{ sale.estimated_profit | currency }}</div></div>
+  <div class="detail-item"><div class="label">Payment</div><div class="value">
+    {% if sale.payment_status == 'Paid' %}<span class="badge badge-paid">Paid</span>
+    {% elif sale.payment_status == 'Partially Paid' %}<span class="badge badge-partial">Partially Paid</span>
+    {% else %}<span class="badge badge-pending">Pending</span>{% endif %}
+  </div></div>
+  <div class="detail-item"><div class="label">Delivery</div><div class="value">
+    {% if sale.is_delivered %}<span class="badge badge-paid">Delivered</span>
+    {% elif sale.is_delivery_overdue %}<span class="badge badge-pending">Overdue</span>
+    {% else %}<span class="badge badge-partial">To deliver</span>{% endif %}
+  </div></div>
+  <div class="detail-item"><div class="label">Delivery Date</div><div class="value">
+    {% if sale.delivery_date %}
+      {{ sale.delivery_date }}
+      {% set days = sale.days_until_delivery %}
+      {% if not sale.is_delivered %}
+        <div class="delivery-date">
+          {% if days < 0 %}{{ -days }} day(s) late
+          {% elif days == 0 %}due today
+          {% else %}in {{ days }} day(s){% endif %}
+        </div>
+      {% endif %}
+    {% else %}-{% endif %}
+  </div></div>
+</div>
+
+{% if not sale.is_delivered %}
+<form method="post" action="{{ url_for('sales.mark_delivered', sale_id=sale.id) }}" style="margin-bottom:20px;">
+  <button class="btn" type="submit">Mark as delivered</button>
+</form>
+{% endif %}
+
+<div class="panel">
+  <h3>Items</h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Product</th><th>Quantity</th><th>Selling Price</th><th>Subtotal</th></tr></thead>
+      <tbody>
+        {% for item in sale.items %}
+        <tr>
+          <td>{{ item.product.name if item.product else 'Deleted product' }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>{{ item.selling_price | currency }}</td>
+          <td>{{ item.subtotal | currency }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if sale.discount and sale.discount > 0 %}
+  <p>
+    <strong>Discount applied:</strong> {{ sale.discount | currency }}
+    {% if sale.discount_type == 'percent' %}({{ sale.discount_label }} of {{ sale.items_subtotal | currency }}){% endif %}
+  </p>
+  {% endif %}
+  {% if sale.notes %}<p><strong>Notes:</strong> {{ sale.notes }}</p>{% endif %}
+</div>
+{% endblock %}

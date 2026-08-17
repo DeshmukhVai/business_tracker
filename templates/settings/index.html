@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Settings - Business Tracker{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1>Settings</h1>
+</div>
+
+
+<div class="panel">
+  <h3>Your Account</h3>
+  <p class="page-subtitle">
+    Signed in as <strong>{{ current_user.username if current_user }}</strong>. Change your password below.
+  </p>
+  <form method="post" action="{{ url_for('auth.change_password') }}">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Current Password</label>
+        <input type="password" name="current_password" autocomplete="current-password" required>
+      </div>
+      <div class="form-group">
+        <label>New Password</label>
+        <input type="password" name="new_password" autocomplete="new-password" required minlength="{{ min_password_length }}">
+        <small class="field-hint">At least {{ min_password_length }} characters.</small>
+      </div>
+      <div class="form-group">
+        <label>Confirm New Password</label>
+        <input type="password" name="confirm_password" autocomplete="new-password" required minlength="{{ min_password_length }}">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn" type="submit">Change Password</button>
+    </div>
+  </form>
+  <p class="page-subtitle">
+    Forgotten it? Run <code>flask reset-password</code> from a console on the machine hosting the app.
+  </p>
+</div>
+
+<div class="panel">
+  <h3>About</h3>
+  <p>Small Home Business Expense &amp; Sales Tracker — built for a single business owner to track sales, expenses, customers, and profit in one place.</p>
+  <p class="page-subtitle">Planned future additions: invoice/PDF generation, Excel/CSV export, backup &amp; restore, WhatsApp payment reminders, inventory tracking.</p>
+</div>
+{% endblock %}

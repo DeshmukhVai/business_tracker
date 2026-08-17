@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Browser tab icon: a briefcase, matching the 💼 in the sidebar brand, on the
+  app's primary indigo #4f46e5. Shapes are deliberately chunky — this is
+  usually drawn at 16x16, where thin strokes turn to mush.
+  (Avoid a double hyphen anywhere in here: it is illegal inside an XML
+  comment and browsers refuse to render a malformed SVG at all.)
+
+  Built from the same rounded rectangles as favicon.png (the handle is an
+  arch carved out of a solid block) so the vector and bitmap versions are
+  identical rather than merely similar.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="14" fill="#4f46e5"/>
+  <!-- handle: white block with the middle carved back to the background -->
+  <rect x="22" y="12" width="20" height="12" rx="6" fill="#ffffff"/>
+  <rect x="27" y="17" width="10" height="9" rx="3" fill="#4f46e5"/>
+  <!-- case -->
+  <rect x="12" y="21" width="40" height="30" rx="5" fill="#ffffff"/>
+  <!-- clasp -->
+  <rect x="27" y="31" width="10" height="7" rx="2.5" fill="#4f46e5"/>
+</svg>

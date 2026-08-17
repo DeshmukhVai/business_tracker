@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% import "partials/icons.html" as icons %}
+{% import "partials/columns.html" as columns %}
+{% block title %}Products - Business Tracker{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Products</h1>
+    <div class="page-subtitle">{{ products | length }} product(s)</div>
+  </div>
+  <a href="{{ url_for('products.add_product') }}" class="btn">+ Add Product</a>
+</div>
+
+<form class="filter-bar" method="get">
+  <input type="text" name="q" placeholder="Search products..." value="{{ search }}">
+  <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem;">
+    <input type="checkbox" name="show_inactive" value="1" {{ 'checked' if show_inactive }} onchange="this.form.submit()">
+    Show inactive
+  </label>
+  {{ icons.search_button("Search products") }}
+  {{ columns.column_menu(fixed_columns, optional_columns, shown_columns) }}
+</form>
+
+<div class="panel">
+  {% if products %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          {% if 'category' in shown_columns %}<th>Category</th>{% endif %}
+          <th>Selling Price</th>
+          {% if 'cost_price' in shown_columns %}<th>Cost Price</th>{% endif %}
+          {% if 'profit' in shown_columns %}<th>Profit/Item</th>{% endif %}
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in products %}
+        <tr>
+          <td>{{ p.name }}</td>
+          {% if 'category' in shown_columns %}<td>{{ p.category or '-' }}</td>{% endif %}
+          <td>{{ p.selling_price | currency }}</td>
+          {% if 'cost_price' in shown_columns %}<td>{{ p.cost_price | currency }}</td>{% endif %}
+          {% if 'profit' in shown_columns %}<td>{{ p.profit_per_item | currency }}</td>{% endif %}
+          <td>
+            {% if p.is_active %}<span class="badge badge-paid">Active</span>
+            {% else %}<span class="badge badge-pending">Inactive</span>{% endif %}
+          </td>
+          <td class="row-actions">
+            <a href="{{ url_for('products.edit_product', product_id=p.id) }}" class="btn btn-secondary btn-sm">Edit</a>
+            <form method="post" action="{{ url_for('products.toggle_active', product_id=p.id) }}">
+              <button class="btn btn-secondary btn-sm" type="submit">{{ 'Deactivate' if p.is_active else 'Activate' }}</button>
+            </form>
+            <form method="post" action="{{ url_for('products.delete_product', product_id=p.id) }}" data-confirm="Delete this product?">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">No products yet. Add your first product to start selling.</div>
+  {% endif %}
+</div>
+{% endblock %}

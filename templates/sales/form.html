@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if sale else 'Add' }} Sale{% endblock %}
+
+{% import "partials/pickers.html" as pickers %}
+
+{% block content %}
+
+<div class="page-header">
+  <h1>{{ 'Edit Sale' if sale else 'Add Sale' }}</h1>
+</div>
+
+<div class="panel">
+  <form method="post" id="saleForm">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Customer *</label>
+        {{ pickers.combo('customer', 'customer_id', customer_options,
+                 sale.customer_id if sale else none,
+                 'Search, or type a new name...', 'customerCombo') }}
+      </div>
+      <div class="form-group">
+        <label>Order Date *</label>
+        <input type="date" name="order_date" value="{{ sale.order_date if sale else today }}" required>
+      </div>
+      <div class="form-group">
+        <label>Delivery Date</label>
+        <input type="date" name="delivery_date" value="{{ sale.delivery_date if sale and sale.delivery_date else '' }}">
+        <small class="field-hint">Leave empty if it was handed over straight away.</small>
+      </div>
+      <div class="form-group">
+        <label>Delivery Status</label>
+        <select name="delivery_status">
+          {% for s in ['Pending', 'Delivered'] %}
+          <option value="{{ s }}" {{ 'selected' if sale and sale.delivery_status == s }}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Payment Method</label>
+        <select name="payment_method">
+          <option value="">Select method</option>
+          {% for m in ['Cash', 'UPI', 'Bank Transfer', 'Card', 'Other'] %}
+          <option value="{{ m }}" {{ 'selected' if sale and sale.payment_method == m }}>{{ m }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <h3 style="margin-top:24px;">Products</h3>
+    <table class="line-items-table" id="lineItemsTable">
+      <thead>
+        <tr><th style="width:35%">Product</th><th style="width:15%">Qty</th><th style="width:20%">Selling Price</th><th style="width:20%">Subtotal</th><th></th></tr>
+      </thead>
+      <tbody id="lineItemsBody">
+        {% if sale and sale.items.count() > 0 %}
+          {% for item in sale.items %}
+          <tr class="line-item-row">
+            <td>
+              {{ pickers.combo('product', 'product_id[]', product_options, item.product_id, 'Search, or type a new name...') }}
+            </td>
+            <td><input type="number" min="1" name="quantity[]" class="qty-input" value="{{ item.quantity }}" required></td>
+            <td><input type="number" min="0" step="0.01" name="selling_price[]" class="price-input" value="{{ item.selling_price }}" required></td>
+            <td class="subtotal-cell">{{ item.subtotal }}</td>
+            <td><button type="button" class="btn btn-danger btn-sm remove-row">✕</button></td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr class="line-item-row">
+            <td>
+              {{ pickers.combo('product', 'product_id[]', product_options, none, 'Search, or type a new name...') }}
+            </td>
+            <td><input type="number" min="1" name="quantity[]" class="qty-input" value="1" required></td>
+            <td><input type="number" min="0" step="0.01" name="selling_price[]" class="price-input" required></td>
+            <td class="subtotal-cell">0.00</td>
+            <td><button type="button" class="btn btn-danger btn-sm remove-row">✕</button></td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+    <div class="line-item-actions">
+      <button type="button" class="btn btn-secondary btn-sm" id="addRowBtn">+ Add another product</button>
+    </div>
+
+    <div class="form-grid" style="margin-top:20px;">
+      <div class="form-group">
+        <label>Discount</label>
+        <div class="input-with-toggle">
+          <input type="number" step="0.01" min="0" name="discount_value" id="discountInput"
+                 value="{{ sale.discount_value if sale else 0 }}">
+          <div class="toggle-group" id="discountTypeToggle">
+            <label class="toggle-option">
+              <input type="radio" name="discount_type" value="amount"
+                     {{ 'checked' if not sale or sale.discount_type != 'percent' }}> ₹ off
+            </label>
+            <label class="toggle-option">
+              <input type="radio" name="discount_type" value="percent"
+                     {{ 'checked' if sale and sale.discount_type == 'percent' }}> % off
+            </label>
+          </div>
+        </div>
+        <small class="field-hint" id="discountHint"></small>
+      </div>
+      <div class="form-group">
+        <label>Order Total</label>
+        <input type="text" id="orderTotalDisplay" readonly value="0.00">
+        <small class="field-hint" id="subtotalHint"></small>
+      </div>
+      <div class="form-group">
+        <label>Amount Received (₹) *</label>
+        <input type="number" step="0.01" min="0" name="amount_paid" id="amountPaidInput"
+               value="{{ sale.amount_paid if sale else '' }}" required>
+        <small class="field-hint">0 if nothing yet, or the advance if they paid part of it.</small>
+        <div class="status-preview" id="paymentStatusPreview"></div>
+      </div>
+      <div class="form-group full-width">
+        <label>Notes</label>
+        <textarea name="notes">{{ sale.notes if sale else '' }}</textarea>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn" type="submit">Save Sale</button>
+      <a href="{{ url_for('sales.list_sales') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{# Kept outside the order form: a nested <form> is invalid HTML and would
+   submit the order when saving a customer. These post via fetch instead. #}
+<div class="dialog-backdrop" id="newCustomerDialog" data-dialog="customer"
+     data-url="{{ url_for('customers.quick_add_customer') }}" hidden>
+  <div class="dialog">
+    <h3>New Customer</h3>
+    <div class="form-group">
+      <label>Name *</label>
+      <input type="text" data-field="name" placeholder="Customer name">
+    </div>
+    <div class="form-group">
+      <label>Phone</label>
+      <input type="text" data-field="phone" placeholder="Optional">
+    </div>
+    <p class="dialog-error"></p>
+    <div class="form-actions">
+      <button type="button" class="btn dialog-save">Save Customer</button>
+      <button type="button" class="btn btn-secondary dialog-cancel">Cancel</button>
+    </div>
+    <small class="field-hint">Add address and notes later from the Customers page.</small>
+  </div>
+</div>
+
+<div class="dialog-backdrop" id="newProductDialog" data-dialog="product"
+     data-url="{{ url_for('products.quick_add_product') }}" hidden>
+  <div class="dialog">
+    <h3>New Product</h3>
+    <div class="form-group">
+      <label>Name *</label>
+      <input type="text" data-field="name" placeholder="Product name">
+    </div>
+    <div class="form-group">
+      <label>Selling Price (₹) *</label>
+      <input type="number" step="0.01" min="0" data-field="selling_price">
+    </div>
+    <div class="form-group">
+      <label>Cost Price (₹) *</label>
+      <input type="number" step="0.01" min="0" data-field="cost_price">
+      <small class="field-hint">What it costs you to make — used for profit.</small>
+    </div>
+    <div class="form-group">
+      <label>Category</label>
+      <input type="text" data-field="category" placeholder="Optional">
+    </div>
+    <p class="dialog-error"></p>
+    <div class="form-actions">
+      <button type="button" class="btn dialog-save">Save Product</button>
+      <button type="button" class="btn btn-secondary dialog-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pickers.js') }}"></script>
+<script src="{{ url_for('static', filename='js/sales_form.js') }}"></script>
+{% endblock %}

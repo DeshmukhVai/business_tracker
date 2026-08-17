@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% import "partials/icons.html" as icons %}
+{% block title %}Customers - Business Tracker{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Customers</h1>
+    <div class="page-subtitle">{{ customers | length }} customer(s)</div>
+  </div>
+  <a href="{{ url_for('customers.add_customer') }}" class="btn">+ Add Customer</a>
+</div>
+
+<form class="filter-bar" method="get">
+  <input type="text" name="q" placeholder="Search by name or phone..." value="{{ search }}">
+  {{ icons.search_button("Search customers") }}
+  {% if search %}<a href="{{ url_for('customers.list_customers') }}" class="btn btn-secondary btn-sm">Clear</a>{% endif %}
+</form>
+
+<div class="panel">
+  {% if customers %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Name</th><th>Phone</th><th>Total Purchased</th><th>Pending</th><th>Last Purchase</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for c in customers %}
+        <tr>
+          <td><a href="{{ url_for('customers.view_customer', customer_id=c.id) }}">{{ c.name }}</a></td>
+          <td>{{ c.phone or '-' }}</td>
+          <td>{{ c.total_purchased() | currency }}</td>
+          <td>{{ c.total_pending() | currency }}</td>
+          <td>{{ c.last_purchase_date() or '-' }}</td>
+          <td class="row-actions">
+            <a href="{{ url_for('customers.view_customer', customer_id=c.id) }}" class="btn btn-secondary btn-sm">View</a>
+            <a href="{{ url_for('customers.edit_customer', customer_id=c.id) }}" class="btn btn-secondary btn-sm">Edit</a>
+            <form method="post" action="{{ url_for('customers.delete_customer', customer_id=c.id) }}" data-confirm="Delete this customer?">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">No customers yet. Add your first customer to get started.</div>
+  {% endif %}
+</div>
+{% endblock %}

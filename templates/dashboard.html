@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Business Tracker{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Dashboard</h1>
+    <div class="page-subtitle">Here's how your business is doing.</div>
+  </div>
+  <div>
+    <a href="{{ url_for('sales.add_sale') }}" class="btn">+ Add Sale</a>
+    <a href="{{ url_for('expenses.add_expense') }}" class="btn btn-secondary">+ Add Expense</a>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <div class="period-tabs">
+    <a href="{{ url_for('dashboard.index', period='today') }}" class="{{ 'active' if period == 'today' }}">Today</a>
+    <a href="{{ url_for('dashboard.index', period='week') }}" class="{{ 'active' if period == 'week' }}">This Week</a>
+    <a href="{{ url_for('dashboard.index', period='month') }}" class="{{ 'active' if period == 'month' }}">This Month</a>
+    <a href="{{ url_for('dashboard.index', period='year') }}" class="{{ 'active' if period == 'year' }}">This Year</a>
+    <a href="{{ url_for('dashboard.index', period='all') }}" class="{{ 'active' if period == 'all' }}">All Time</a>
+  </div>
+  <form method="get" class="filter-bar" style="margin:0;">
+    <input type="hidden" name="period" value="custom">
+    <input type="date" name="start" value="{{ start }}" required>
+    <input type="date" name="end" value="{{ end }}" required>
+    <button class="btn btn-secondary btn-sm" type="submit">Custom Range</button>
+  </form>
+</div>
+
+<div class="card-grid">
+  <div class="stat-card neutral">
+    <div class="stat-label">Total Sales</div>
+    <div class="stat-value">{{ summary.total_sales | currency }}</div>
+  </div>
+  <div class="stat-card negative">
+    <div class="stat-label">Total Expenses</div>
+    <div class="stat-value">{{ summary.total_expenses | currency }}</div>
+  </div>
+  <div class="stat-card positive">
+    <div class="stat-label">Total Profit</div>
+    <div class="stat-value">{{ summary.total_profit | currency }}</div>
+  </div>
+  <div class="stat-card positive">
+    <div class="stat-label">Amount Received</div>
+    <div class="stat-value">{{ summary.amount_received | currency }}</div>
+  </div>
+  <div class="stat-card negative">
+    <div class="stat-label">Amount Pending</div>
+    <div class="stat-value">{{ summary.amount_pending | currency }}</div>
+  </div>
+  <div class="stat-card neutral">
+    <div class="stat-label">Customers</div>
+    <div class="stat-value">{{ summary.num_customers }}</div>
+  </div>
+  <div class="stat-card neutral">
+    <div class="stat-label">Orders</div>
+    <div class="stat-value">{{ summary.num_orders }}</div>
+  </div>
+</div>
+
+{% if due_deliveries %}
+<div class="panel delivery-due-panel">
+  <div class="panel-header">
+    <h3>Deliveries Due</h3>
+    <a href="{{ url_for('sales.list_sales', delivery='Pending') }}" class="btn btn-secondary btn-sm">See all</a>
+  </div>
+  <p class="section-hint">Orders still to go out — overdue first, then the next 7 days. Not affected by the date filter above.</p>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Due</th><th>Order</th><th>Customer</th><th>Total</th><th>Payment</th><th></th></tr></thead>
+      <tbody>
+        {% for s in due_deliveries %}
+        {% set days = s.days_until_delivery %}
+        <tr>
+          <td>
+            {% if days < 0 %}<span class="badge badge-pending">{{ -days }} day(s) late</span>
+            {% elif days == 0 %}<span class="badge badge-partial">Today</span>
+            {% else %}<span class="badge badge-partial">In {{ days }} day(s)</span>{% endif %}
+            <div class="delivery-date">{{ s.delivery_date }}</div>
+          </td>
+          <td><a href="{{ url_for('sales.view_sale', sale_id=s.id) }}">#{{ s.id }}</a></td>
+          <td>{{ s.customer.name if s.customer else '-' }}</td>
+          <td>{{ s.total_amount | currency }}</td>
+          <td>
+            {% if s.payment_status == 'Paid' %}<span class="badge badge-paid">Paid</span>
+            {% elif s.payment_status == 'Partially Paid' %}<span class="badge badge-partial">Partially Paid</span>
+            {% else %}<span class="badge badge-pending">Pending</span>{% endif %}
+          </td>
+          <td class="row-actions">
+            <form method="post" action="{{ url_for('sales.mark_delivered', sale_id=s.id) }}">
+              <button class="btn btn-secondary btn-sm" type="submit">Mark delivered</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<div class="chart-grid">
+  <div class="panel">
+    <h3>Sales vs Expenses</h3>
+    <div class="chart-container"><canvas id="salesExpensesChart"></canvas></div>
+  </div>
+  <div class="panel">
+    <h3>Sales by Product</h3>
+    <div class="chart-container"><canvas id="productChart"></canvas></div>
+  </div>
+  <div class="panel">
+    <h3>Payment Status</h3>
+    <div class="chart-container"><canvas id="statusChart"></canvas></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const chartLabels = {{ chart_series.labels | tojson }};
+const chartSales = {{ chart_series.sales | tojson }};
+const chartExpenses = {{ chart_series.expenses | tojson }};
+const productLabels = {{ product_chart['labels'] | tojson }};
+const productValues = {{ product_chart['values'] | tojson }};
+const statusData = {{ status_chart | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

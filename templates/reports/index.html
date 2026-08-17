@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Reports - Business Tracker{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1>Reports</h1>
+</div>
+
+<div class="panel">
+  <form method="get" class="filter-bar">
+    <select name="month">
+      {% for m in range(1, 13) %}
+      <option value="{{ m }}" {{ 'selected' if m == month }}>{{ ['January','February','March','April','May','June','July','August','September','October','November','December'][m-1] }}</option>
+      {% endfor %}
+    </select>
+    <select name="year">
+      {% for y in range(year - 3, year + 1) %}
+      <option value="{{ y }}" {{ 'selected' if y == year }}>{{ y }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-secondary btn-sm" type="submit">View Month</button>
+  </form>
+</div>
+
+<div class="panel">
+  <h3>Monthly Summary — {{ monthly_summary.label }}</h3>
+  <div class="summary-line"><span>Sales</span><span>{{ monthly_summary.sales | currency }}</span></div>
+  <div class="summary-line"><span>Expenses</span><span>{{ monthly_summary.expenses | currency }}</span></div>
+  <div class="summary-line"><span>Received</span><span>{{ monthly_summary.received | currency }}</span></div>
+  <div class="summary-line"><span>Pending</span><span>{{ monthly_summary.pending | currency }}</span></div>
+  <div class="summary-line"><span>Profit</span><span>{{ monthly_summary.profit | currency }}</span></div>
+</div>
+
+<div class="chart-grid">
+  <div class="panel">
+    <h3>Expense Breakdown (All Time)</h3>
+    {% if expense_breakdown %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Category</th><th>Amount</th></tr></thead>
+        <tbody>
+          {% for cat, amount in expense_breakdown %}
+          <tr><td>{{ cat }}</td><td>{{ amount | currency }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">No expenses recorded yet.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="panel">
+  <h3>Customer Report</h3>
+  {% if customer_rows %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Customer</th><th>Orders</th><th>Total Purchases</th><th>Paid</th><th>Pending</th></tr></thead>
+      <tbody>
+        {% for row in customer_rows %}
+        <tr>
+          <td><a href="{{ url_for('customers.view_customer', customer_id=row.customer.id) }}">{{ row.customer.name }}</a></td>
+          <td>{{ row.orders }}</td>
+          <td>{{ row.purchased | currency }}</td>
+          <td>{{ row.paid | currency }}</td>
+          <td>{{ row.pending | currency }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">No customer purchases yet.</div>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h3>Product Report</h3>
+  {% if product_rows %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Product</th><th>Units Sold</th><th>Revenue</th><th>Estimated Profit</th></tr></thead>
+      <tbody>
+        {% for row in product_rows %}
+        <tr>
+          <td>{{ row.product.name }}</td>
+          <td>{{ row.units_sold }}</td>
+          <td>{{ row.revenue | currency }}</td>
+          <td>{{ row.profit | currency }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">No product sales yet.</div>
+  {% endif %}
+</div>
+{% endblock %}

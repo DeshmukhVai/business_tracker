@@ -1,0 +1,31 @@
+{#
+  Columns menu for a list page's filter bar.
+
+  <details> gives a real dropdown with no JavaScript. The checkboxes live
+  inside the surrounding filter form, so the chosen columns travel with the
+  filters and end up in the URL.
+
+  `fixed` is the list of always-shown column labels, `optional` a list of
+  (key, label) pairs, `shown` the keys currently selected.
+#}
+{% macro column_menu(fixed, optional, shown) %}
+<details class="column-menu">
+  <summary class="btn btn-secondary btn-sm">
+    Columns{% if shown %} ({{ shown | length }}){% endif %}
+  </summary>
+  <div class="column-menu-panel">
+    <p class="column-menu-title">Always shown</p>
+    {% for label in fixed %}
+    <label class="column-option is-fixed"><input type="checkbox" checked disabled> {{ label }}</label>
+    {% endfor %}
+    <p class="column-menu-title">Add</p>
+    {% for key, label in optional %}
+    <label class="column-option">
+      <input type="checkbox" name="cols" value="{{ key }}" {{ 'checked' if key in shown }}>
+      {{ label }}
+    </label>
+    {% endfor %}
+    <button class="btn btn-sm column-menu-apply" type="submit">Apply</button>
+  </div>
+</details>
+{% endmacro %}

@@ -1,0 +1,35 @@
+{% extends "auth/shell.html" %}
+{% block title %}Create Your Account - Business Tracker{% endblock %}
+{% block content %}
+
+<h1 class="auth-title">Create your account</h1>
+<p class="auth-subtitle">
+  This is the first time the tracker has been opened, so pick the username and
+  password you will sign in with from now on. This page closes itself once the
+  account exists.
+</p>
+
+<form method="post">
+  <div class="form-group">
+    <label>Username</label>
+    <input type="text" name="username" autocomplete="username" autofocus required>
+  </div>
+  <div class="form-group">
+    <label>Password</label>
+    <input type="password" name="password" autocomplete="new-password" required
+           minlength="{{ min_length }}">
+    <small class="field-hint">At least {{ min_length }} characters.</small>
+  </div>
+  <div class="form-group">
+    <label>Confirm Password</label>
+    <input type="password" name="confirm_password" autocomplete="new-password" required
+           minlength="{{ min_length }}">
+  </div>
+  <button class="btn auth-submit" type="submit">Create Account</button>
+</form>
+
+<p class="auth-footnote">
+  There is no password reset by email — if you forget it, the password can be
+  reset from a console with <code>flask reset-password</code>.
+</p>
+{% endblock %}

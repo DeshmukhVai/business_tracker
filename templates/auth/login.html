@@ -1,0 +1,20 @@
+{% extends "auth/shell.html" %}
+{% block title %}Sign In - Business Tracker{% endblock %}
+{% block content %}
+
+<h1 class="auth-title">Sign in</h1>
+<p class="auth-subtitle">Your sales, expenses and customer records are behind this.</p>
+
+<form method="post">
+  {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+  <div class="form-group">
+    <label>Username</label>
+    <input type="text" name="username" autocomplete="username" autofocus required>
+  </div>
+  <div class="form-group">
+    <label>Password</label>
+    <input type="password" name="password" autocomplete="current-password" required>
+  </div>
+  <button class="btn auth-submit" type="submit">Sign In</button>
+</form>
+{% endblock %}

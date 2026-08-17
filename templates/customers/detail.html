@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ customer.name }} - Business Tracker{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <a href="{{ url_for('customers.list_customers') }}" class="back-link">&larr; All Customers</a>
+    <h1>{{ customer.name }}</h1>
+    <div class="page-subtitle">{{ customer.phone or '' }} {{ '· ' + customer.email if customer.email }}</div>
+  </div>
+  <div>
+    <a href="{{ url_for('sales.add_sale') }}" class="btn">+ New Sale</a>
+    <a href="{{ url_for('customers.edit_customer', customer_id=customer.id) }}" class="btn btn-secondary">Edit</a>
+  </div>
+</div>
+
+<div class="detail-grid">
+  <div class="detail-item"><div class="label">Total Orders</div><div class="value">{{ customer.total_orders() }}</div></div>
+  <div class="detail-item"><div class="label">Total Purchased</div><div class="value">{{ customer.total_purchased() | currency }}</div></div>
+  <div class="detail-item"><div class="label">Total Paid</div><div class="value">{{ customer.total_paid() | currency }}</div></div>
+  <div class="detail-item"><div class="label">Total Pending</div><div class="value">{{ customer.total_pending() | currency }}</div></div>
+  <div class="detail-item"><div class="label">Last Purchase</div><div class="value">{{ customer.last_purchase_date() or '-' }}</div></div>
+</div>
+
+{% if customer.address or customer.notes %}
+<div class="panel">
+  {% if customer.address %}<p><strong>Address:</strong> {{ customer.address }}</p>{% endif %}
+  {% if customer.notes %}<p><strong>Notes:</strong> {{ customer.notes }}</p>{% endif %}
+</div>
+{% endif %}
+
+<div class="panel">
+  <h3>Order History</h3>
+  {% if orders %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Date</th><th>Order</th><th>Total</th><th>Paid</th><th>Pending</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for order in orders %}
+        <tr>
+          <td>{{ order.order_date }}</td>
+          <td><a href="{{ url_for('sales.view_sale', sale_id=order.id) }}">#{{ order.id }}</a></td>
+          <td>{{ order.total_amount | currency }}</td>
+          <td>{{ order.amount_paid | currency }}</td>
+          <td>{{ order.remaining_amount | currency }}</td>
+          <td>
+            {% if order.payment_status == 'Paid' %}<span class="badge badge-paid">Paid</span>
+            {% elif order.payment_status == 'Partially Paid' %}<span class="badge badge-partial">Partially Paid</span>
+            {% else %}<span class="badge badge-pending">Pending</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">No orders yet for this customer.</div>
+  {% endif %}
+</div>
+{% endblock %}

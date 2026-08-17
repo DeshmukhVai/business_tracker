@@ -1,0 +1,28 @@
+{#
+  Shared inline icons.
+
+  Inline SVG rather than an emoji or an icon font: it inherits the button's
+  colour via currentColor, stays crisp at any size, and needs no external
+  request (the app is served without a CDN for anything but Chart.js).
+
+  Icon-only buttons carry both title and aria-label so the action is still
+  announced to a screen reader and on hover.
+#}
+
+{# A door with an arrow leaving it. Sits beside the "Sign out" label rather
+   than replacing it: ending the session by mis-clicking an unlabelled glyph
+   is a worse mistake than the space the word costs. #}
+{% macro sign_out() %}
+<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+  <path d="M11 3H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h6a.9.9 0 0 0 0-1.8H5.2a.2.2 0 0 1-.2-.2V5.2c0-.11.09-.2.2-.2H11a.9.9 0 0 0 0-1.8Z"/>
+  <path d="M13.6 6.4a.9.9 0 0 0-1.27 1.27l1.43 1.43H9a.9.9 0 0 0 0 1.8h4.76l-1.43 1.43a.9.9 0 1 0 1.27 1.27l2.97-2.96a.9.9 0 0 0 0-1.28L13.6 6.4Z"/>
+</svg>
+{% endmacro %}
+
+{% macro search_button(label='Search') %}
+<button class="btn btn-secondary btn-sm btn-icon" type="submit" title="{{ label }}" aria-label="{{ label }}">
+  <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+    <path d="M8.5 2.5a6 6 0 0 1 4.74 9.68l4.04 4.04a.9.9 0 0 1-1.28 1.28l-4.04-4.05A6 6 0 1 1 8.5 2.5Zm0 1.8a4.2 4.2 0 1 0 0 8.4 4.2 4.2 0 0 0 0-8.4Z"/>
+  </svg>
+</button>
+{% endmacro %}

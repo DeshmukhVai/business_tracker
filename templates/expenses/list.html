@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% import "partials/icons.html" as icons %}
+{% import "partials/columns.html" as columns %}
+{% block title %}Expenses - Business Tracker{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Expenses</h1>
+    <div class="page-subtitle">Total: {{ total | currency }}</div>
+  </div>
+  <a href="{{ url_for('expenses.add_expense') }}" class="btn">+ Add Expense</a>
+</div>
+
+<form class="filter-bar" method="get">
+  <input type="text" name="q" placeholder="Search description or item..." value="{{ search }}">
+  <select name="category">
+    <option value="">All Categories</option>
+    {% for cat in categories %}<option value="{{ cat }}" {{ 'selected' if category == cat }}>{{ cat }}</option>{% endfor %}
+  </select>
+  <input type="date" name="start" value="{{ start or '' }}">
+  <input type="date" name="end" value="{{ end or '' }}">
+  {{ icons.search_button("Search and filter expenses") }}
+
+  {{ columns.column_menu(fixed_columns, optional_columns, shown_columns) }}
+
+  {# Clearing resets the filters but keeps the chosen columns — that is a
+     view preference, not a filter. #}
+  <a href="{{ url_for('expenses.list_expenses', cols=shown_columns) }}" class="btn btn-secondary btn-sm">Clear</a>
+</form>
+
+<div class="panel">
+  {% if expenses %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          {% if 'category' in shown_columns %}<th>Category</th>{% endif %}
+          <th>Description</th>
+          <th>Amount</th>
+          {% if 'payment_method' in shown_columns %}<th>Payment Method</th>{% endif %}
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in expenses %}
+        <tr>
+          <td>{{ e.expense_date }}</td>
+          {% if 'category' in shown_columns %}<td>{{ e.category }}</td>{% endif %}
+          <td>
+            {{ e.description or '-' }}
+            {% set rows = e.item_list %}
+            {% if rows %}
+            <div class="item-breakdown">
+              {% for item in rows[:3] %}
+              <span class="item-chip">{{ item.name }} {{ item.quantity }} × {{ item.unit_price | currency }}</span>
+              {% endfor %}
+              {% if rows | length > 3 %}
+              <a href="{{ url_for('expenses.view_expense', expense_id=e.id) }}" class="item-chip item-chip-more">+{{ rows | length - 3 }} more</a>
+              {% endif %}
+            </div>
+            {% endif %}
+          </td>
+          <td>{{ e.amount | currency }}</td>
+          {% if 'payment_method' in shown_columns %}<td>{{ e.payment_method or '-' }}</td>{% endif %}
+          <td class="row-actions">
+            <a href="{{ url_for('expenses.view_expense', expense_id=e.id) }}" class="btn btn-secondary btn-sm">View</a>
+            <a href="{{ url_for('expenses.edit_expense', expense_id=e.id) }}" class="btn btn-secondary btn-sm">Edit</a>
+            <form method="post" action="{{ url_for('expenses.delete_expense', expense_id=e.id) }}" data-confirm="Delete this expense?">
+              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">No expenses recorded yet.</div>
+  {% endif %}
+</div>
+{% endblock %}

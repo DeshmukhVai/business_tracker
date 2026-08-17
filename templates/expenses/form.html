@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if expense else 'Add' }} Expense{% endblock %}
+
+{% import "partials/pickers.html" as pickers %}
+
+{% block content %}
+
+<div class="page-header">
+  <h1>{{ 'Edit Expense' if expense else 'Add Expense' }}</h1>
+</div>
+
+<div class="panel">
+  <form method="post" id="expenseForm">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Date *</label>
+        <input type="date" name="expense_date" value="{{ expense.expense_date if expense else '' }}" required>
+      </div>
+      <div class="form-group">
+        <label>Category *</label>
+        {{ pickers.combo('category', 'category', category_options,
+                         expense.category if expense else none,
+                         'Search, or type a new one...', 'categoryCombo') }}
+      </div>
+      <div class="form-group">
+        <label>Total Amount (₹) *</label>
+        <input type="number" step="0.01" min="0.01" name="amount" id="amountInput"
+               value="{{ expense.amount if expense else '' }}" required>
+      </div>
+      {# This is the whole expense. The item rows below are a separate note
+         of what individual things cost and are never added into it. #}
+      <div class="form-group">
+        <label>Payment Method</label>
+        <select name="payment_method">
+          <option value="">Select method</option>
+          {% for m in ['Cash', 'UPI', 'Bank Transfer', 'Card', 'Other'] %}
+          <option value="{{ m }}" {{ 'selected' if expense and expense.payment_method == m }}>{{ m }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group full-width">
+        <label>Description</label>
+        <input type="text" name="description" value="{{ expense.description if expense else '' }}">
+      </div>
+      <div class="form-group full-width">
+        <label>Notes</label>
+        <textarea name="notes">{{ expense.notes if expense else '' }}</textarea>
+      </div>
+    </div>
+
+    <h3 style="margin-top:24px;">Raw Materials / Items <span class="optional-tag">optional</span></h3>
+    <p class="section-hint">
+      A note of what individual things cost — pink pipe cleaner ₹120, tape ₹40 — so you can look
+      the rates up later. List as few or as many as you like. These rows are for reference only
+      and are not added into the total amount above.
+    </p>
+    <table class="line-items-table" id="expenseItemsTable">
+      <thead>
+        <tr>
+          <th style="width:50%">Item</th>
+          <th style="width:20%">Qty</th>
+          <th style="width:25%">Price per unit (₹)</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="expenseItemsBody">
+        {% set rows = expense.item_list if expense else [] %}
+        {% if rows %}
+          {% for item in rows %}
+          <tr class="expense-item-row">
+            <td><input type="text" name="item_name[]" class="item-name" value="{{ item.name }}" placeholder="e.g. Pipe cleaner"></td>
+            <td><input type="number" min="0" step="0.01" name="item_quantity[]" class="item-qty" value="{{ item.quantity }}"></td>
+            <td><input type="number" min="0" step="0.01" name="item_unit_price[]" class="item-price" value="{{ item.unit_price }}"></td>
+            <td><button type="button" class="btn btn-danger btn-sm remove-item-row">✕</button></td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr class="expense-item-row">
+            <td><input type="text" name="item_name[]" class="item-name" placeholder="e.g. Pipe cleaner"></td>
+            <td><input type="number" min="0" step="0.01" name="item_quantity[]" class="item-qty" value="1"></td>
+            <td><input type="number" min="0" step="0.01" name="item_unit_price[]" class="item-price"></td>
+            <td><button type="button" class="btn btn-danger btn-sm remove-item-row">✕</button></td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+    <button type="button" class="btn btn-secondary btn-sm" id="addItemRowBtn">+ Add another item</button>
+
+    <div class="form-actions">
+      <button class="btn" type="submit">Save</button>
+      <a href="{{ url_for('expenses.list_expenses') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{# Outside the expense form: a nested <form> is invalid HTML and would submit
+   the expense when saving a category. This posts via fetch instead. #}
+<div class="dialog-backdrop" id="newCategoryDialog" data-dialog="category"
+     data-url="{{ url_for('expenses.quick_add_category') }}" hidden>
+  <div class="dialog">
+    <h3>New Category</h3>
+    <div class="form-group">
+      <label>Name *</label>
+      <input type="text" data-field="name" placeholder="e.g. Flowers">
+    </div>
+    <p class="dialog-error"></p>
+    <div class="form-actions">
+      <button type="button" class="btn dialog-save">Save Category</button>
+      <button type="button" class="btn btn-secondary dialog-cancel">Cancel</button>
+    </div>
+    <small class="field-hint">It stays in the list for future expenses.</small>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pickers.js') }}"></script>
+<script src="{{ url_for('static', filename='js/expense_form.js') }}"></script>
+{% endblock %}

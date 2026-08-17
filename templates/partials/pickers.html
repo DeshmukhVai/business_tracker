@@ -1,0 +1,36 @@
+{#
+  Searchable picker, shared by the sale form (customer, product) and the
+  expense form (category).
+
+  One control per field: a text box you can type in, with the list dropping
+  down under it. The visible box only ever shows a label; the value that
+  gets submitted lives in the hidden input, under the field name the server
+  already expects. The last row of the list creates a new record, so the
+  picker is the only control the field needs.
+
+  `options` is a list of {id, label, price} dicts — price may be None for
+  kinds that have no price. Driven by static/js/pickers.js.
+#}
+{% macro combo(kind, field_name, options, selected_id, placeholder, dom_id='', noun='') %}
+{% set thing = noun or kind %}
+<div class="combo" data-combo="{{ kind }}" data-required
+     data-required-message="Please choose a {{ thing }}."
+     {% if dom_id %}id="{{ dom_id }}"{% endif %}>
+  {% set chosen = options | selectattr('id', 'equalto', selected_id) | first if selected_id else none %}
+  <input type="text" class="combo-input" placeholder="{{ placeholder }}" autocomplete="off"
+         value="{{ chosen.label if chosen else '' }}">
+  <input type="hidden" class="combo-value {{ 'product-select' if kind == 'product' }}"
+         name="{{ field_name }}" value="{{ selected_id or '' }}"
+         {% if chosen and chosen.price is not none %}data-price="{{ chosen.price }}"{% endif %}>
+  <button type="button" class="combo-toggle" tabindex="-1" aria-label="Show list">▾</button>
+  <ul class="combo-list" hidden>
+    {# Creating sits at the top of the list, above the records. #}
+    <li class="combo-option combo-create" data-create="{{ kind }}">+ New {{ thing }}</li>
+    {% for option in options %}
+    <li class="combo-option" data-value="{{ option.id }}"
+        {% if option.price is not none %}data-price="{{ option.price }}"{% endif %}>{{ option.label }}</li>
+    {% endfor %}
+  </ul>
+</div>
+<small class="combo-error"></small>
+{% endmacro %}
