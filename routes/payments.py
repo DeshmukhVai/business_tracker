@@ -1,6 +1,6 @@
 """Pending payments page: who still owes money."""
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, g
 
 from models.sale import Sale, PAYMENT_STATUS_PAID
 from models.customer import Customer
@@ -12,7 +12,9 @@ payments_bp = Blueprint("payments", __name__, url_prefix="/payments")
 def list_pending():
     sort_by = request.args.get("sort", "highest")
 
-    sales = Sale.query.filter(Sale.payment_status != PAYMENT_STATUS_PAID).all()
+    sales = Sale.query.filter(
+        Sale.business_id == g.business.id, Sale.payment_status != PAYMENT_STATUS_PAID
+    ).all()
 
     if sort_by == "oldest":
         sales.sort(key=lambda s: s.order_date)

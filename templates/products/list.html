@@ -38,9 +38,12 @@
         </tr>
       </thead>
       <tbody>
+        {# No detail page for a product, so the row opens the edit screen. #}
         {% for p in products %}
-        <tr>
-          <td>{{ p.name }}</td>
+        <tr data-href="{{ url_for('products.edit_product', product_id=p.id) }}">
+          {# Linked so the product stays reachable without a mouse, now
+             that the Edit button has gone. #}
+          <td><a href="{{ url_for('products.edit_product', product_id=p.id) }}">{{ p.name }}</a></td>
           {% if 'category' in shown_columns %}<td>{{ p.category or '-' }}</td>{% endif %}
           <td>{{ p.selling_price | currency }}</td>
           {% if 'cost_price' in shown_columns %}<td>{{ p.cost_price | currency }}</td>{% endif %}
@@ -50,12 +53,11 @@
             {% else %}<span class="badge badge-pending">Inactive</span>{% endif %}
           </td>
           <td class="row-actions">
-            <a href="{{ url_for('products.edit_product', product_id=p.id) }}" class="btn btn-secondary btn-sm">Edit</a>
             <form method="post" action="{{ url_for('products.toggle_active', product_id=p.id) }}">
               <button class="btn btn-secondary btn-sm" type="submit">{{ 'Deactivate' if p.is_active else 'Activate' }}</button>
             </form>
             <form method="post" action="{{ url_for('products.delete_product', product_id=p.id) }}" data-confirm="Delete this product?">
-              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+              {{ icons.delete_button("Delete " ~ p.name) }}
             </form>
           </td>
         </tr>

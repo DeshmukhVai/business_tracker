@@ -7,7 +7,7 @@ rows via JavaScript for orders with several products.
 
 from datetime import datetime, date
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, g
 
 from extensions import db
 from models.sale import (
@@ -44,7 +44,7 @@ def list_sales():
     start_raw = request.args.get("start")
     end_raw = request.args.get("end")
 
-    query = Sale.query
+    query = Sale.query.filter_by(business_id=g.business.id)
     if customer_id:
         query = query.filter(Sale.customer_id == customer_id)
     if status:
@@ -75,8 +75,8 @@ def list_sales():
         query = query.join(Customer).filter(Customer.name.ilike(like))
 
     sales = query.order_by(Sale.order_date.desc(), Sale.id.desc()).all()
-    customers = Customer.query.order_by(Customer.name).all()
-    products = Product.query.order_by(Product.name).all()
+    customers = Customer.query.filter_by(business_id=g.business.id).order_by(Customer.name).all()
+    products = Product.query.filter_by(business_id=g.business.id).order_by(Product.name).all()
 
     return render_template(
         "sales/list.html",
@@ -165,7 +165,7 @@ def _build_order_items(sale, form):
     for idx, pid in enumerate(product_ids):
         if not pid:
             continue
-        product = Product.query.get(int(pid))
+        product = Product.query.filter_by(id=int(pid), business_id=g.business.id).first()
         if not product:
             raise ValueError("Selected product could not be found.")
         quantity = parse_positive_int(quantities[idx] if idx < len(quantities) else None, "Quantity")
@@ -186,16 +186,29 @@ def _build_order_items(sale, form):
     return items
 
 
+def _require_own_customer(customer_id):
+    """The chosen customer must belong to the active business, not just exist."""
+    customer = Customer.query.filter_by(id=customer_id, business_id=g.business.id).first()
+    if not customer:
+        raise ValueError("Selected customer could not be found.")
+    return customer
+
+
 @sales_bp.route("/add", methods=["GET", "POST"])
 def add_sale():
-    customers = Customer.query.order_by(Customer.name).all()
-    products = Product.query.filter_by(is_active=True).order_by(Product.name).all()
+    customers = Customer.query.filter_by(business_id=g.business.id).order_by(Customer.name).all()
+    products = (
+        Product.query.filter_by(business_id=g.business.id, is_active=True)
+        .order_by(Product.name)
+        .all()
+    )
 
     if request.method == "POST":
         try:
             customer_id = request.form.get("customer_id", type=int)
             if not customer_id:
                 raise ValueError("Please select a customer.")
+            _require_own_customer(customer_id)
 
             order_date = parse_date(request.form.get("order_date"), "Order date")
             amount_paid = parse_amount(request.form.get("amount_paid") or 0, "Amount paid")
@@ -205,6 +218,7 @@ def add_sale():
             delivery_date, delivery_status = _parse_delivery(request.form)
 
             sale = Sale(
+                business_id=g.business.id,
                 customer_id=customer_id,
                 order_date=order_date,
                 delivery_date=delivery_date,
@@ -243,15 +257,20 @@ def add_sale():
 
 @sales_bp.route("/<int:sale_id>/edit", methods=["GET", "POST"])
 def edit_sale(sale_id):
-    sale = Sale.query.get_or_404(sale_id)
-    customers = Customer.query.order_by(Customer.name).all()
-    products = Product.query.filter_by(is_active=True).order_by(Product.name).all()
+    sale = Sale.query.filter_by(id=sale_id, business_id=g.business.id).first_or_404()
+    customers = Customer.query.filter_by(business_id=g.business.id).order_by(Customer.name).all()
+    products = (
+        Product.query.filter_by(business_id=g.business.id, is_active=True)
+        .order_by(Product.name)
+        .all()
+    )
 
     if request.method == "POST":
         try:
             customer_id = request.form.get("customer_id", type=int)
             if not customer_id:
                 raise ValueError("Please select a customer.")
+            _require_own_customer(customer_id)
 
             sale.customer_id = customer_id
             sale.order_date = parse_date(request.form.get("order_date"), "Order date")
@@ -293,7 +312,7 @@ def edit_sale(sale_id):
 
 @sales_bp.route("/<int:sale_id>/delete", methods=["POST"])
 def delete_sale(sale_id):
-    sale = Sale.query.get_or_404(sale_id)
+    sale = Sale.query.filter_by(id=sale_id, business_id=g.business.id).first_or_404()
     db.session.delete(sale)
     db.session.commit()
     flash("Sale deleted.", "success")
@@ -302,14 +321,14 @@ def delete_sale(sale_id):
 
 @sales_bp.route("/<int:sale_id>")
 def view_sale(sale_id):
-    sale = Sale.query.get_or_404(sale_id)
+    sale = Sale.query.filter_by(id=sale_id, business_id=g.business.id).first_or_404()
     return render_template("sales/detail.html", sale=sale)
 
 
 @sales_bp.route("/<int:sale_id>/mark-delivered", methods=["POST"])
 def mark_delivered(sale_id):
     """Quick action from the sales list to tick an order off as delivered."""
-    sale = Sale.query.get_or_404(sale_id)
+    sale = Sale.query.filter_by(id=sale_id, business_id=g.business.id).first_or_404()
     sale.delivery_status = DELIVERY_STATUS_DELIVERED
     if not sale.delivery_date:
         # Nothing was promised in advance, so record today as the day it went.
@@ -322,7 +341,7 @@ def mark_delivered(sale_id):
 @sales_bp.route("/<int:sale_id>/record-payment", methods=["POST"])
 def record_payment(sale_id):
     """Quick action from the Pending Payments page to log an additional payment."""
-    sale = Sale.query.get_or_404(sale_id)
+    sale = Sale.query.filter_by(id=sale_id, business_id=g.business.id).first_or_404()
     try:
         extra_payment = parse_amount(request.form.get("amount"), "Payment amount", allow_zero=False)
         new_total_paid = float(sale.amount_paid) + extra_payment

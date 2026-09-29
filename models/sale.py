@@ -28,6 +28,7 @@ class Sale(db.Model):
     __tablename__ = "sales"
 
     id = db.Column(db.Integer, primary_key=True)
+    business_id = db.Column(db.Integer, db.ForeignKey("businesses.id"), nullable=False)
     customer_id = db.Column(db.Integer, db.ForeignKey("customers.id"), nullable=False)
     order_date = db.Column(db.Date, nullable=False, default=date.today)
     total_amount = db.Column(db.Numeric(10, 2), nullable=False, default=0)

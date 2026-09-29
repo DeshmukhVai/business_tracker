@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Businesses - Business Tracker{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Businesses</h1>
+    <div class="page-subtitle">Pick which business to work in, or start a new one.</div>
+  </div>
+</div>
+
+{% if partnerships %}
+<div class="panel">
+  <h3>Your Businesses</h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Name</th><th>Your Role</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for p in partnerships %}
+        <tr>
+          <td>{{ p.business.name }}</td>
+          <td>{{ p.role | capitalize }}</td>
+          <td class="row-actions">
+            {% if current_business and current_business.id == p.business_id %}
+            <span class="badge badge-paid">Active</span>
+            {% else %}
+            <form method="post" action="{{ url_for('businesses.switch', business_id=p.business_id) }}">
+              <button class="btn btn-secondary btn-sm" type="submit">Switch to this business</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if can_create %}
+<div class="panel">
+  <h3>Create a New Business</h3>
+  <p class="page-subtitle">You'll be its first owner, and can add partners to it afterwards from Settings.</p>
+  <form method="post" action="{{ url_for('businesses.create') }}">
+    <div class="form-group">
+      <label>Business Name</label>
+      <input type="text" name="name" autofocus required maxlength="120">
+    </div>
+    <div class="form-actions">
+      <button class="btn" type="submit">Create Business</button>
+    </div>
+  </form>
+</div>
+{% elif partnerships %}
+<div class="panel">
+  <p class="page-subtitle">
+    Only an owner of an existing business can create another one. Ask an owner of one of
+    your businesses to make you an owner if you need to create your own.
+  </p>
+</div>
+{% endif %}
+{% endblock %}

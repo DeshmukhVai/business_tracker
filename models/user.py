@@ -28,6 +28,10 @@ class User(db.Model):
     failed_attempts = db.Column(db.Integer, nullable=False, default=0)
     locked_until = db.Column(db.DateTime, nullable=True)
 
+    partnerships = db.relationship(
+        "BusinessPartner", back_populates="user", cascade="all, delete-orphan"
+    )
+
     def set_password(self, raw_password):
         self.password_hash = generate_password_hash(raw_password)
 

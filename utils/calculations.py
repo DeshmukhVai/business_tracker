@@ -33,7 +33,7 @@ def get_date_range(period, start=None, end=None):
     return None, None
 
 
-def deliveries_due(days_ahead=7):
+def deliveries_due(business_id, days_ahead=7):
     """Undelivered orders that are overdue, due today, or due soon.
 
     Deliberately ignores the dashboard's period filter: what still has to
@@ -43,6 +43,7 @@ def deliveries_due(days_ahead=7):
     today = date.today()
     return (
         Sale.query.filter(
+            Sale.business_id == business_id,
             Sale.delivery_status != DELIVERY_STATUS_DELIVERED,
             Sale.delivery_date.isnot(None),
             Sale.delivery_date <= today + timedelta(days=days_ahead),
@@ -52,8 +53,8 @@ def deliveries_due(days_ahead=7):
     )
 
 
-def sales_query(start=None, end=None):
-    query = Sale.query
+def sales_query(business_id, start=None, end=None):
+    query = Sale.query.filter(Sale.business_id == business_id)
     if start:
         query = query.filter(Sale.order_date >= start)
     if end:
@@ -61,8 +62,8 @@ def sales_query(start=None, end=None):
     return query
 
 
-def expenses_query(start=None, end=None):
-    query = Expense.query
+def expenses_query(business_id, start=None, end=None):
+    query = Expense.query.filter(Expense.business_id == business_id)
     if start:
         query = query.filter(Expense.expense_date >= start)
     if end:
@@ -70,9 +71,9 @@ def expenses_query(start=None, end=None):
     return query
 
 
-def dashboard_summary(start=None, end=None):
-    sales = sales_query(start, end).all()
-    expenses = expenses_query(start, end).all()
+def dashboard_summary(business_id, start=None, end=None):
+    sales = sales_query(business_id, start, end).all()
+    expenses = expenses_query(business_id, start, end).all()
 
     total_sales = sum(float(s.total_amount) for s in sales)
     total_received = sum(float(s.amount_paid) for s in sales)
@@ -86,15 +87,15 @@ def dashboard_summary(start=None, end=None):
         "total_profit": total_profit,
         "amount_received": total_received,
         "amount_pending": total_pending,
-        "num_customers": Customer.query.count(),
+        "num_customers": Customer.query.filter_by(business_id=business_id).count(),
         "num_orders": len(sales),
     }
 
 
-def sales_vs_expenses_series(start=None, end=None):
+def sales_vs_expenses_series(business_id, start=None, end=None):
     """Daily totals suitable for a line/bar chart."""
-    sales = sales_query(start, end).order_by(Sale.order_date).all()
-    expenses = expenses_query(start, end).order_by(Expense.expense_date).all()
+    sales = sales_query(business_id, start, end).order_by(Sale.order_date).all()
+    expenses = expenses_query(business_id, start, end).order_by(Expense.expense_date).all()
 
     by_date = {}
     for s in sales:
@@ -114,10 +115,12 @@ def sales_vs_expenses_series(start=None, end=None):
     }
 
 
-def sales_by_product(start=None, end=None):
+def sales_by_product(business_id, start=None, end=None):
     from models.sale import OrderItem
 
-    items = OrderItem.query.join(Sale).filter(Sale.id == OrderItem.order_id)
+    items = OrderItem.query.join(Sale).filter(
+        Sale.id == OrderItem.order_id, Sale.business_id == business_id
+    )
     if start:
         items = items.filter(Sale.order_date >= start)
     if end:
@@ -136,8 +139,8 @@ def sales_by_product(start=None, end=None):
     }
 
 
-def payment_status_breakdown(start=None, end=None):
-    sales = sales_query(start, end).all()
+def payment_status_breakdown(business_id, start=None, end=None):
+    sales = sales_query(business_id, start, end).all()
     counts = {"Paid": 0, "Partially Paid": 0, "Pending": 0}
     for s in sales:
         counts[s.payment_status] = counts.get(s.payment_status, 0) + 1

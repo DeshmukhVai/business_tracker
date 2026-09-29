@@ -21,6 +21,24 @@
       <span class="brand-icon">💼</span>
       <span class="brand-name">Business Tracker</span>
     </div>
+    {% if user_businesses %}
+    <div class="sidebar-business">
+      <label for="businessSwitchSelect">Business</label>
+      <form method="post" id="businessSwitchForm" data-switch-url-template="{{ url_for('businesses.switch', business_id=0) }}">
+        <select name="business_id" id="businessSwitchSelect" aria-label="Switch business">
+          {% if not current_business %}
+          {# Nothing is actually active yet — a real placeholder rather than
+             letting the browser silently default to the first business,
+             which would look chosen without ever having been submitted. #}
+          <option value="" selected disabled>Select a business…</option>
+          {% endif %}
+          {% for biz in user_businesses %}
+          <option value="{{ biz.id }}" {{ 'selected' if current_business and current_business.id == biz.id }}>{{ biz.name }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+    {% endif %}
     <nav class="nav-menu">
       <a href="{{ url_for('dashboard.index') }}" class="{{ 'active' if request.endpoint == 'dashboard.index' }}">📊 Dashboard</a>
       <a href="{{ url_for('sales.list_sales') }}" class="{{ 'active' if request.blueprint == 'sales' }}">🧾 Sales</a>
@@ -30,6 +48,7 @@
       <a href="{{ url_for('payments.list_pending') }}" class="{{ 'active' if request.blueprint == 'payments' }}">⏳ Pending Payments</a>
       <a href="{{ url_for('reports.index') }}" class="{{ 'active' if request.blueprint == 'reports' }}">📈 Reports</a>
       <a href="{{ url_for('settings.index') }}" class="{{ 'active' if request.blueprint == 'settings' }}">⚙️ Settings</a>
+      <a href="{{ url_for('businesses.select') }}" class="{{ 'active' if request.endpoint == 'businesses.select' }}">🏢 Businesses</a>
     </nav>
   </aside>
 
@@ -38,12 +57,17 @@
   <main class="main-content">
     {% if current_user %}
     <header class="topbar">
+      {% if current_business %}
+      <div class="topbar-business">
+        <span class="badge badge-paid">{{ current_business.name }}</span>
+      </div>
+      {% endif %}
       <div class="topbar-account">
         <span class="account-avatar">{{ current_user.username[0] | upper }}</span>
         <span class="account-name">{{ current_user.username }}</span>
         <form method="post" action="{{ url_for('auth.logout') }}">
-          <button class="btn btn-secondary btn-sm" type="submit" title="Sign out">
-            {{ icons.sign_out() }} Sign out
+          <button class="btn btn-secondary btn-sm btn-expandable" type="submit" title="Sign out" aria-label="Sign out">
+            {{ icons.sign_out() }}<span class="btn-label">Sign out</span>
           </button>
         </form>
       </div>

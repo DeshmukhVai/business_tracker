@@ -3,7 +3,7 @@
 from datetime import date
 import calendar
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, g
 
 from models.sale import Sale
 from models.expense import Expense
@@ -23,8 +23,13 @@ def index():
     last_day = calendar.monthrange(year, month)[1]
     month_end = date(year, month, last_day)
 
-    sales = Sale.query.filter(Sale.order_date.between(month_start, month_end)).all()
-    expenses = Expense.query.filter(Expense.expense_date.between(month_start, month_end)).all()
+    business_id = g.business.id
+    sales = Sale.query.filter(
+        Sale.business_id == business_id, Sale.order_date.between(month_start, month_end)
+    ).all()
+    expenses = Expense.query.filter(
+        Expense.business_id == business_id, Expense.expense_date.between(month_start, month_end)
+    ).all()
 
     total_sales = sum(float(s.total_amount) for s in sales)
     total_received = sum(float(s.amount_paid) for s in sales)
@@ -45,14 +50,14 @@ def index():
     # month for spotting where money habitually goes, so this section uses
     # the full history rather than being locked to the selected month).
     breakdown = {}
-    for e in Expense.query.all():
+    for e in Expense.query.filter_by(business_id=business_id).all():
         breakdown.setdefault(e.category, 0.0)
         breakdown[e.category] += float(e.amount)
     expense_breakdown = sorted(breakdown.items(), key=lambda kv: kv[1], reverse=True)
 
     # Customer report.
     customer_rows = []
-    for customer in Customer.query.order_by(Customer.name).all():
+    for customer in Customer.query.filter_by(business_id=business_id).order_by(Customer.name).all():
         orders = customer.total_orders()
         if orders == 0:
             continue
@@ -69,7 +74,7 @@ def index():
 
     # Product report.
     product_rows = []
-    for product in Product.query.order_by(Product.name).all():
+    for product in Product.query.filter_by(business_id=business_id).order_by(Product.name).all():
         units = product.units_sold()
         if units == 0:
             continue

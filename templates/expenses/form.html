@@ -38,6 +38,17 @@
           {% endfor %}
         </select>
       </div>
+      <div class="form-group">
+        <label>Paid By</label>
+        <select name="paid_by">
+          <option value="">Select person</option>
+          <option value="business" {{ 'selected' if expense and expense.paid_from_business }}>Business (from profit)</option>
+          {% for user in partner_users %}
+          <option value="{{ user.id }}" {{ 'selected' if expense and expense.paid_by_user_id == user.id }}>{{ user.username }}</option>
+          {% endfor %}
+        </select>
+        <small class="field-hint">Pick a partner if they paid personally, or "Business" if it came straight out of business funds.</small>
+      </div>
       <div class="form-group full-width">
         <label>Description</label>
         <input type="text" name="description" value="{{ expense.description if expense else '' }}">

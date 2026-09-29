@@ -90,8 +90,8 @@ def setup():
             db.session.commit()
 
             _start_session(user)
-            flash("Account created. You are signed in.", "success")
-            return redirect(url_for("dashboard.index"))
+            flash("Account created. Now create your first business.", "success")
+            return redirect(url_for("businesses.select"))
         except ValueError as exc:
             db.session.rollback()
             flash(str(exc), "error")

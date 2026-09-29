@@ -15,12 +15,15 @@ from flask import (
     url_for,
     flash,
     jsonify,
+    g,
 )
 from sqlalchemy import or_
 
 from extensions import db
+from models.business_partner import BusinessPartner
 from models.expense import Expense, ExpenseItem
 from models.expense_category import ExpenseCategory
+from models.user import User
 from utils.columns import selected_columns
 from utils.validators import (
     parse_amount,
@@ -39,7 +42,42 @@ FIXED_COLUMNS = ["Date", "Description", "Amount", "Actions"]
 OPTIONAL_COLUMNS = [
     ("category", "Category"),
     ("payment_method", "Payment Method"),
+    ("paid_by", "Paid By"),
 ]
+
+
+def _partner_users():
+    """Users who partner in the active business, for the "Paid By" dropdown.
+
+    A dropdown rather than free text so an expense can only ever be
+    attributed to someone who actually has access to this business.
+    """
+    return (
+        User.query.join(BusinessPartner, BusinessPartner.user_id == User.id)
+        .filter(BusinessPartner.business_id == g.business.id)
+        .order_by(User.username)
+        .all()
+    )
+
+
+def _parse_paid_by(form):
+    """Read the "Paid By" field into (paid_by_user_id, paid_from_business).
+
+    The dropdown offers three kinds of answer: a specific partner, the
+    business's own funds ("business"), or left blank. Rejects a partner
+    id that isn't actually a partner here — the dropdown only ever offers
+    valid ones, but the form field is still just text an edited request
+    could tamper with.
+    """
+    raw = (form.get("paid_by") or "").strip()
+    if not raw:
+        return None, False
+    if raw == "business":
+        return None, True
+    user_id = int(raw)
+    if not BusinessPartner.query.filter_by(business_id=g.business.id, user_id=user_id).first():
+        raise ValueError("Selected person is not a partner of this business.")
+    return user_id, False
 
 
 @expenses_bp.route("/")
@@ -49,7 +87,7 @@ def list_expenses():
     start_raw = request.args.get("start")
     end_raw = request.args.get("end")
 
-    query = Expense.query
+    query = Expense.query.filter_by(business_id=g.business.id)
     if search:
         # Match the description or any raw-material row, so searching
         # "tape" finds the materials run that included tape.
@@ -83,7 +121,7 @@ def list_expenses():
         category=category,
         start=start_raw,
         end=end_raw,
-        categories=ExpenseCategory.names(),
+        categories=ExpenseCategory.names(g.business.id),
         fixed_columns=FIXED_COLUMNS,
         optional_columns=OPTIONAL_COLUMNS,
         shown_columns=selected_columns(OPTIONAL_COLUMNS),
@@ -92,7 +130,11 @@ def list_expenses():
 
 def _category_options():
     """Categories shaped for the picker macro."""
-    categories = ExpenseCategory.query.order_by(ExpenseCategory.name).all()
+    categories = (
+        ExpenseCategory.query.filter_by(business_id=g.business.id)
+        .order_by(ExpenseCategory.name)
+        .all()
+    )
     return [{"id": c.name, "label": c.name, "price": None} for c in categories]
 
 
@@ -101,10 +143,10 @@ def quick_add_category():
     """Create a category from the expense form without leaving the page."""
     try:
         name = parse_required_text(request.form.get("name"), "Category name", 50)
-        existing = ExpenseCategory.find_by_name(name)
+        existing = ExpenseCategory.find_by_name(g.business.id, name)
         if existing:
             raise ValueError(f"'{existing.name}' is already a category.")
-        category = ExpenseCategory(name=name)
+        category = ExpenseCategory(business_id=g.business.id, name=name)
         db.session.add(category)
         db.session.commit()
     except ValueError as exc:
@@ -156,12 +198,16 @@ def add_expense():
     if request.method == "POST":
         try:
             items = _build_expense_items(request.form)
+            paid_by_user_id, paid_from_business = _parse_paid_by(request.form)
             expense = Expense(
+                business_id=g.business.id,
                 expense_date=parse_date(request.form.get("expense_date"), "Date"),
                 category=parse_required_text(request.form.get("category"), "Category", 50),
                 description=parse_optional_text(request.form.get("description"), 255),
                 amount=parse_amount(request.form.get("amount"), "Total amount", allow_zero=False),
                 payment_method=parse_optional_text(request.form.get("payment_method"), 30),
+                paid_by_user_id=paid_by_user_id,
+                paid_from_business=paid_from_business,
                 notes=parse_optional_text(request.form.get("notes")),
             )
             for item in items:
@@ -174,13 +220,16 @@ def add_expense():
             db.session.rollback()
             flash(str(exc), "error")
     return render_template(
-        "expenses/form.html", expense=None, category_options=_category_options()
+        "expenses/form.html",
+        expense=None,
+        category_options=_category_options(),
+        partner_users=_partner_users(),
     )
 
 
 @expenses_bp.route("/<int:expense_id>/edit", methods=["GET", "POST"])
 def edit_expense(expense_id):
-    expense = Expense.query.get_or_404(expense_id)
+    expense = Expense.query.filter_by(id=expense_id, business_id=g.business.id).first_or_404()
     if request.method == "POST":
         try:
             items = _build_expense_items(request.form)
@@ -191,6 +240,7 @@ def edit_expense(expense_id):
                 request.form.get("amount"), "Total amount", allow_zero=False
             )
             expense.payment_method = parse_optional_text(request.form.get("payment_method"), 30)
+            expense.paid_by_user_id, expense.paid_from_business = _parse_paid_by(request.form)
             expense.notes = parse_optional_text(request.form.get("notes"))
 
             # Replace the item rows entirely with the submitted set, the
@@ -207,19 +257,22 @@ def edit_expense(expense_id):
             db.session.rollback()
             flash(str(exc), "error")
     return render_template(
-        "expenses/form.html", expense=expense, category_options=_category_options()
+        "expenses/form.html",
+        expense=expense,
+        category_options=_category_options(),
+        partner_users=_partner_users(),
     )
 
 
 @expenses_bp.route("/<int:expense_id>")
 def view_expense(expense_id):
-    expense = Expense.query.get_or_404(expense_id)
+    expense = Expense.query.filter_by(id=expense_id, business_id=g.business.id).first_or_404()
     return render_template("expenses/detail.html", expense=expense)
 
 
 @expenses_bp.route("/<int:expense_id>/delete", methods=["POST"])
 def delete_expense(expense_id):
-    expense = Expense.query.get_or_404(expense_id)
+    expense = Expense.query.filter_by(id=expense_id, business_id=g.business.id).first_or_404()
     db.session.delete(expense)
     db.session.commit()
     flash("Expense deleted.", "success")

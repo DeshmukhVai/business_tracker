@@ -2,8 +2,11 @@
 
 A simple, clean web app for a small home-business owner to track expenses, products, sales/orders, customers, payments, and profit — built with Python, Flask, and SQLite.
 
+The tracker can run more than one business from a single install, each with its own customers, products, sales and expenses, and each shared by one or more partners (see **Businesses & Partners** below).
+
 ## Features
 
+- Multiple businesses per install, each with its own data, and multiple partners per business who all share full access to it
 - Dashboard with summary cards (sales, expenses, profit, received, pending, customers, orders) and charts (sales vs expenses, sales by product, payment status), filterable by day/week/month/year/custom range
 - Customer management with full purchase history
 - Product catalog with automatic per-item profit calculation
@@ -124,6 +127,22 @@ After pushing new code (e.g. `git pull` in a Bash console), just click **Reload*
 
 Your entire business database is the single file `instance/business_tracker.db`. Periodically download a copy of this file from the **Files** tab as a simple backup.
 
+## Businesses & Partners
+
+- The first time you sign in with a new account, you're asked to create your first
+  business. Everything you record afterwards (customers, products, sales, expenses)
+  belongs to whichever business is currently active.
+- A business can have more than one **partner** — another user account with full
+  access to that business's data. Add one from **Settings → Manage Partners**: enter
+  a username, a role (**Owner** can manage partners and rename the business;
+  **Partner** has the same data access but not those two things), and — if the
+  username doesn't have an account yet — a starting password to share with them.
+- If you partner in more than one business, a **Switch** link appears next to the
+  business name in the top bar, and the **Businesses** page (in the sidebar) lists
+  all of them with a button to switch or a form to create another.
+- A business can never be left with zero partners — the last remaining partner
+  can't be removed (including by themself).
+
 ## Signing In
 
 - Every page requires a signed-in user. The very first visit shows a one-time
@@ -171,6 +190,6 @@ The codebase is organized so these can be added without restructuring:
 - Backup & restore (download/upload the `instance/business_tracker.db` file)
 - WhatsApp payment reminders (integrate a WhatsApp API from `routes/payments.py`)
 - Inventory/stock tracking (add a `stock_quantity` column to `Product`)
-- Additional user accounts (the `User` model and login already exist; what is missing
-  is a screen to invite a second user and per-user permissions)
+- Finer-grained per-user permissions within a business (today every partner has the
+  same full access; only managing partners/renaming is owner-only)
 - CSRF tokens on forms (see Data Safety Notes)

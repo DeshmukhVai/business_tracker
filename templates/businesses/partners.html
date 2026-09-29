@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% import "partials/icons.html" as icons %}
+{% block title %}Partners - Business Tracker{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>{{ current_business.name }} — Partners</h1>
+    <div class="page-subtitle">Every partner has full access to this business's data.</div>
+  </div>
+</div>
+
+<div class="panel">
+  <h3>Current Partners</h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Username</th><th>Role</th><th>Partner Since</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for p in partnerships %}
+        <tr>
+          <td>{{ p.user.username }}{% if p.user_id == current_user.id %} (you){% endif %}</td>
+          <td>
+            {% if current_partnership.is_owner %}
+            <form method="post" action="{{ url_for('businesses.update_role', partnership_id=p.id) }}">
+              <select name="role" onchange="this.form.submit()" aria-label="Role for {{ p.user.username }}">
+                {% for role in roles %}
+                <option value="{{ role }}" {{ 'selected' if p.role == role }}>{{ role | capitalize }}</option>
+                {% endfor %}
+              </select>
+            </form>
+            {% else %}
+            {{ p.role | capitalize }}
+            {% endif %}
+          </td>
+          <td>{{ p.created_at.strftime('%d %b %Y') if p.created_at else '-' }}</td>
+          <td class="row-actions">
+            {% if current_partnership.is_owner %}
+            <form method="post" action="{{ url_for('businesses.remove_partner', partnership_id=p.id) }}" data-confirm="Remove {{ p.user.username }} from {{ current_business.name }}?">
+              {{ icons.delete_button("Remove " ~ p.user.username) }}
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if current_partnership.is_owner %}
+<div class="panel">
+  <h3>Add a Partner</h3>
+  <p class="page-subtitle">
+    If the username already has an account elsewhere in this tracker, they're just added here —
+    no password needed. Otherwise, pick a starting password for them; they can change it once signed in.
+  </p>
+  <form method="post" action="{{ url_for('businesses.add_partner') }}">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" name="username" required maxlength="80">
+      </div>
+      <div class="form-group">
+        <label>Role</label>
+        <select name="role">
+          {% for role in roles %}
+          <option value="{{ role }}">{{ role | capitalize }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Starting Password (new usernames only)</label>
+        <input type="password" name="password" autocomplete="new-password">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn" type="submit">Add Partner</button>
+    </div>
+  </form>
+</div>
+
+<div class="panel">
+  <h3>Rename Business</h3>
+  <form method="post" action="{{ url_for('businesses.rename') }}">
+    <div class="form-group">
+      <label>Business Name</label>
+      <input type="text" name="name" value="{{ current_business.name }}" required maxlength="120">
+    </div>
+    <div class="form-actions">
+      <button class="btn" type="submit">Save Name</button>
+    </div>
+  </form>
+</div>
+
+<div class="panel" style="border-color: var(--color-danger);">
+  <h3>Danger Zone</h3>
+  <p class="page-subtitle">
+    Permanently deletes <strong>{{ current_business.name }}</strong> and everything in it —
+    {{ counts.customers }} customer(s), {{ counts.products }} product(s),
+    {{ counts.sales }} sale(s), and {{ counts.expenses }} expense(s).
+    {% if partnerships | length > 1 %}It also removes access for every other partner.{% endif %}
+    <strong>This cannot be undone.</strong>
+  </p>
+  <form
+    method="post"
+    action="{{ url_for('businesses.delete') }}"
+    data-confirm="Permanently delete {{ current_business.name }} and all its data? This cannot be undone."
+  >
+    <div class="form-group">
+      <label>Type "{{ current_business.name }}" to confirm</label>
+      <input type="text" name="confirm_name" required autocomplete="off" placeholder="{{ current_business.name }}">
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-danger" type="submit">Delete Business Permanently</button>
+    </div>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

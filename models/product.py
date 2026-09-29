@@ -9,6 +9,7 @@ class Product(db.Model):
     __tablename__ = "products"
 
     id = db.Column(db.Integer, primary_key=True)
+    business_id = db.Column(db.Integer, db.ForeignKey("businesses.id"), nullable=False)
     name = db.Column(db.String(120), nullable=False)
     category = db.Column(db.String(80), nullable=True)
     selling_price = db.Column(db.Numeric(10, 2), nullable=False, default=0)

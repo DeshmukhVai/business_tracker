@@ -15,13 +15,35 @@ class Expense(db.Model):
     __tablename__ = "expenses"
 
     id = db.Column(db.Integer, primary_key=True)
+    business_id = db.Column(db.Integer, db.ForeignKey("businesses.id"), nullable=False)
     expense_date = db.Column(db.Date, nullable=False, default=date.today)
     category = db.Column(db.String(50), nullable=False)
     description = db.Column(db.String(255), nullable=True)
     amount = db.Column(db.Numeric(10, 2), nullable=False, default=0)
     payment_method = db.Column(db.String(30), nullable=True)
+    # Which partner of the business actually paid this — a dropdown of
+    # partners rather than free text, so it can't drift into names that
+    # aren't really part of the business. Nullable: expenses recorded
+    # before this existed have no one on file, and that's fine.
+    paid_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    # The alternative to paid_by_user_id: this came straight out of the
+    # business's own funds/profit rather than a partner's pocket, so
+    # there's no one to reimburse. Mutually exclusive with paid_by_user_id
+    # — the form only ever sets one of the two.
+    paid_from_business = db.Column(db.Boolean, nullable=False, default=False)
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    paid_by = db.relationship("User")
+
+    @property
+    def paid_by_label(self):
+        """How "who paid" reads on screen, or None if never recorded."""
+        if self.paid_from_business:
+            return "Business (Profit)"
+        if self.paid_by:
+            return self.paid_by.username
+        return None
 
     items = db.relationship(
         "ExpenseItem", back_populates="expense", cascade="all, delete-orphan", lazy="dynamic"

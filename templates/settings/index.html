@@ -8,6 +8,18 @@
 
 
 <div class="panel">
+  <h3>Business</h3>
+  <p class="page-subtitle">
+    Working in <strong>{{ current_business.name }}</strong> as
+    <strong>{{ current_partnership.role | capitalize }}</strong>.
+  </p>
+  <div class="form-actions">
+    <a href="{{ url_for('businesses.partners') }}" class="btn btn-secondary">Manage Partners</a>
+    <a href="{{ url_for('businesses.select') }}" class="btn btn-secondary">Switch Business</a>
+  </div>
+</div>
+
+<div class="panel">
   <h3>Your Account</h3>
   <p class="page-subtitle">
     Signed in as <strong>{{ current_user.username if current_user }}</strong>. Change your password below.

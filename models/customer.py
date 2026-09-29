@@ -9,6 +9,7 @@ class Customer(db.Model):
     __tablename__ = "customers"
 
     id = db.Column(db.Integer, primary_key=True)
+    business_id = db.Column(db.Integer, db.ForeignKey("businesses.id"), nullable=False)
     name = db.Column(db.String(120), nullable=False)
     phone = db.Column(db.String(20), nullable=True)
     email = db.Column(db.String(120), nullable=True)

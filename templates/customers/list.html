@@ -26,17 +26,18 @@
       </thead>
       <tbody>
         {% for c in customers %}
-        <tr>
+        <tr data-href="{{ url_for('customers.view_customer', customer_id=c.id) }}">
           <td><a href="{{ url_for('customers.view_customer', customer_id=c.id) }}">{{ c.name }}</a></td>
           <td>{{ c.phone or '-' }}</td>
           <td>{{ c.total_purchased() | currency }}</td>
           <td>{{ c.total_pending() | currency }}</td>
           <td>{{ c.last_purchase_date() or '-' }}</td>
+          {# View and Edit are gone from here: clicking the row opens the
+             customer, and Edit lives on that page. The linked name keeps
+             the record reachable by keyboard. #}
           <td class="row-actions">
-            <a href="{{ url_for('customers.view_customer', customer_id=c.id) }}" class="btn btn-secondary btn-sm">View</a>
-            <a href="{{ url_for('customers.edit_customer', customer_id=c.id) }}" class="btn btn-secondary btn-sm">Edit</a>
             <form method="post" action="{{ url_for('customers.delete_customer', customer_id=c.id) }}" data-confirm="Delete this customer?">
-              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+              {{ icons.delete_button("Delete " ~ c.name) }}
             </form>
           </td>
         </tr>

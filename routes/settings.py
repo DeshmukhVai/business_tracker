@@ -6,7 +6,7 @@ currently configured. Kept as its own blueprint so future settings
 home without restructuring the app.
 """
 
-from flask import Blueprint, render_template, current_app
+from flask import Blueprint, render_template, current_app, g
 
 from models.expense_category import ExpenseCategory
 from models.user import MIN_PASSWORD_LENGTH
@@ -18,7 +18,7 @@ settings_bp = Blueprint("settings", __name__, url_prefix="/settings")
 def index():
     return render_template(
         "settings/index.html",
-        categories=ExpenseCategory.names(),
+        categories=ExpenseCategory.names(g.business.id),
         payment_methods=current_app.config["PAYMENT_METHODS"],
         min_password_length=MIN_PASSWORD_LENGTH,
     )

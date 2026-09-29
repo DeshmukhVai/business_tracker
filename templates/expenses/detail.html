@@ -15,6 +15,7 @@
   <div class="detail-item"><div class="label">Total Amount</div><div class="value">{{ expense.amount | currency }}</div></div>
   <div class="detail-item"><div class="label">Category</div><div class="value">{{ expense.category }}</div></div>
   <div class="detail-item"><div class="label">Payment Method</div><div class="value">{{ expense.payment_method or '-' }}</div></div>
+  <div class="detail-item"><div class="label">Paid By</div><div class="value">{{ expense.paid_by_label or '-' }}</div></div>
   <div class="detail-item"><div class="label">Items Noted</div><div class="value">{{ expense.item_count or '-' }}</div></div>
 </div>
 

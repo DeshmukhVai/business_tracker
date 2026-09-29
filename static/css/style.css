@@ -58,6 +58,30 @@ a { color: inherit; text-decoration: none; }
   margin-bottom: 10px;
 }
 
+.sidebar-business {
+  padding: 0 20px 16px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.sidebar-business label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #a5b4fc;
+  margin-bottom: 6px;
+}
+.sidebar-business select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  font-size: 0.9rem;
+}
+.sidebar-business select option { color: var(--color-text); }
+
 .nav-menu { display: flex; flex-direction: column; padding: 0 10px; gap: 2px; }
 
 .nav-menu a {
@@ -146,6 +170,35 @@ a { color: inherit; text-decoration: none; }
 
 /* An icon sitting next to a button's label. */
 .btn svg { width: 15px; height: 15px; fill: currentColor; flex-shrink: 0; }
+
+/* Icon-only button whose label slides out on hover/focus, rather than
+   sitting there permanently — used for Sign out in the topbar, where the
+   action matters but its label doesn't need to take up room until
+   someone is actually about to click it. */
+.btn-expandable {
+  padding: 8px;
+  gap: 0;
+  overflow: hidden;
+  transition: background 0.15s ease, padding 0.2s ease, gap 0.2s ease;
+}
+.btn-expandable .btn-label {
+  display: inline-block;
+  max-width: 0;
+  opacity: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: max-width 0.2s ease, opacity 0.15s ease;
+}
+.btn-expandable:hover,
+.btn-expandable:focus-visible {
+  padding: 8px 14px;
+  gap: 6px;
+}
+.btn-expandable:hover .btn-label,
+.btn-expandable:focus-visible .btn-label {
+  max-width: 100px;
+  opacity: 1;
+}
 
 /* Columns menu in a filter bar — a native <details> dropdown. */
 .column-menu { position: relative; }
@@ -298,6 +351,15 @@ table.data-table td {
 table.data-table tr:hover td { background: #fafafe; }
 .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
+/* Rows that open a record when clicked (wired up in main.js). The
+   pointer is the only hint that the whole line is a target, so it
+   matters more here than usual. */
+table.data-table tr[data-href] { cursor: pointer; }
+table.data-table tr[data-href]:hover td { background: #f4f4fd; }
+/* The action buttons and links inside still behave as themselves. */
+table.data-table tr[data-href] a,
+table.data-table tr[data-href] button { cursor: pointer; }
+
 /* Status badges */
 .badge {
   display: inline-block;
@@ -398,6 +460,7 @@ table.data-table tr:hover td { background: #fafafe; }
   margin-bottom: 20px;
   border-bottom: 1px solid var(--color-border);
 }
+.topbar-business { display: flex; align-items: center; gap: 10px; margin-right: auto; }
 .topbar-account { display: flex; align-items: center; gap: 10px; }
 .account-avatar {
   width: 30px;

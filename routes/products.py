@@ -1,6 +1,6 @@
 """Product management: list, add, edit, activate/deactivate, delete."""
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, g
 
 from extensions import db
 from models.product import Product
@@ -24,7 +24,7 @@ def list_products():
     search = request.args.get("q", "").strip()
     show_inactive = request.args.get("show_inactive") == "1"
 
-    query = Product.query
+    query = Product.query.filter_by(business_id=g.business.id)
     if not show_inactive:
         query = query.filter(Product.is_active.is_(True))
     if search:
@@ -48,6 +48,7 @@ def add_product():
             selling_price = parse_amount(request.form.get("selling_price"), "Selling price")
             cost_price = parse_amount(request.form.get("cost_price"), "Cost price")
             product = Product(
+                business_id=g.business.id,
                 name=parse_required_text(request.form.get("name"), "Product name", 120),
                 category=parse_optional_text(request.form.get("category"), 80),
                 selling_price=selling_price,
@@ -73,6 +74,7 @@ def quick_add_product():
     """
     try:
         product = Product(
+            business_id=g.business.id,
             name=parse_required_text(request.form.get("name"), "Product name", 120),
             category=parse_optional_text(request.form.get("category"), 80),
             selling_price=parse_amount(request.form.get("selling_price"), "Selling price"),
@@ -101,7 +103,7 @@ def quick_add_product():
 
 @products_bp.route("/<int:product_id>/edit", methods=["GET", "POST"])
 def edit_product(product_id):
-    product = Product.query.get_or_404(product_id)
+    product = Product.query.filter_by(id=product_id, business_id=g.business.id).first_or_404()
     if request.method == "POST":
         try:
             product.name = parse_required_text(request.form.get("name"), "Product name", 120)
@@ -121,7 +123,7 @@ def edit_product(product_id):
 
 @products_bp.route("/<int:product_id>/toggle-active", methods=["POST"])
 def toggle_active(product_id):
-    product = Product.query.get_or_404(product_id)
+    product = Product.query.filter_by(id=product_id, business_id=g.business.id).first_or_404()
     product.is_active = not product.is_active
     db.session.commit()
     state = "activated" if product.is_active else "deactivated"
@@ -131,7 +133,7 @@ def toggle_active(product_id):
 
 @products_bp.route("/<int:product_id>/delete", methods=["POST"])
 def delete_product(product_id):
-    product = Product.query.get_or_404(product_id)
+    product = Product.query.filter_by(id=product_id, business_id=g.business.id).first_or_404()
     if product.order_items.count() > 0:
         flash(
             "This product has past sales and cannot be deleted. "

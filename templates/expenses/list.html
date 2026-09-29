@@ -40,16 +40,19 @@
           <th>Description</th>
           <th>Amount</th>
           {% if 'payment_method' in shown_columns %}<th>Payment Method</th>{% endif %}
+          {% if 'paid_by' in shown_columns %}<th>Paid By</th>{% endif %}
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for e in expenses %}
-        <tr>
+        <tr data-href="{{ url_for('expenses.view_expense', expense_id=e.id) }}">
           <td>{{ e.expense_date }}</td>
           {% if 'category' in shown_columns %}<td>{{ e.category }}</td>{% endif %}
           <td>
-            {{ e.description or '-' }}
+            {# Linked so the expense stays reachable without a mouse, now
+               that the View button has gone. #}
+            <a href="{{ url_for('expenses.view_expense', expense_id=e.id) }}">{{ e.description or '-' }}</a>
             {% set rows = e.item_list %}
             {% if rows %}
             <div class="item-breakdown">
@@ -64,11 +67,10 @@
           </td>
           <td>{{ e.amount | currency }}</td>
           {% if 'payment_method' in shown_columns %}<td>{{ e.payment_method or '-' }}</td>{% endif %}
+          {% if 'paid_by' in shown_columns %}<td>{{ e.paid_by_label or '-' }}</td>{% endif %}
           <td class="row-actions">
-            <a href="{{ url_for('expenses.view_expense', expense_id=e.id) }}" class="btn btn-secondary btn-sm">View</a>
-            <a href="{{ url_for('expenses.edit_expense', expense_id=e.id) }}" class="btn btn-secondary btn-sm">Edit</a>
             <form method="post" action="{{ url_for('expenses.delete_expense', expense_id=e.id) }}" data-confirm="Delete this expense?">
-              <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+              {{ icons.delete_button("Delete " ~ (e.description or "expense")) }}
             </form>
           </td>
         </tr>

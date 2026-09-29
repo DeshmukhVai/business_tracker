@@ -62,33 +62,42 @@ def create_app(config_name=None):
         # create_all does not add columns to tables that already exist, so
         # top those up separately for databases created before a feature
         # shipped. Also a no-op once the columns are present.
-        from utils.schema import ensure_columns
+        from utils.schema import (
+            ensure_columns,
+            migrate_expense_categories_table,
+            ensure_default_business,
+        )
+
+        # Must run before ensure_columns()/ensure_default_business() touch
+        # expense_categories: it rebuilds the table itself (see docstring).
+        migrate_expense_categories_table(db)
 
         added = ensure_columns(db)
         if added:
             app.logger.info("Added missing database columns: %s", ", ".join(added))
 
-        # Expense categories moved from config.py into the database so they
-        # can be added from the expense form. Seed the original list once so
-        # an existing tracker keeps the categories it already offered.
-        from models.expense_category import ExpenseCategory
-
-        seeded = ExpenseCategory.seed_defaults(app.config["EXPENSE_CATEGORIES"])
-        if seeded:
-            app.logger.info("Seeded expense categories: %s", ", ".join(seeded))
+        # Multi-business support: give any pre-existing data (recorded
+        # before businesses existed) a home so it is not orphaned.
+        default_business_name = ensure_default_business(db)
+        if default_business_name:
+            app.logger.info(
+                "Created '%s' to hold pre-existing data", default_business_name
+            )
 
     return app
 
 
 def register_auth(app):
-    """Require a signed-in user for every page except the sign-in ones.
+    """Require a signed-in user, with an active business chosen, for every
+    page except the sign-in and business-selection ones.
 
     Deliberately a global guard rather than a per-route decorator: a new
     route added later is protected by default instead of only when
     somebody remembers the decorator.
     """
-    from flask import request, redirect, url_for, g
+    from flask import request, redirect, url_for, g, flash
     from routes.auth import PUBLIC_ENDPOINTS, current_user, any_user_exists
+    from routes.businesses import BUSINESS_EXEMPT_ENDPOINTS, resolve_current_business
 
     @app.before_request
     def require_login():
@@ -97,21 +106,33 @@ def register_auth(app):
             return None
 
         g.user = current_user()
-        if g.user:
-            return None
+        if not g.user:
+            # No accounts yet: send the owner to create the first one.
+            if not any_user_exists():
+                return redirect(url_for("auth.setup"))
+            # Come back to the requested page after signing in.
+            return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
 
-        # No accounts yet: send the owner to create the first one.
-        if not any_user_exists():
-            return redirect(url_for("auth.setup"))
+        g.business = resolve_current_business(g.user)
+        if g.business is None and endpoint not in BUSINESS_EXEMPT_ENDPOINTS:
+            # Without this message, bouncing back to the same page you just
+            # tried to leave looks like the link is simply broken rather
+            # than "you partner in more than one business — pick one first".
+            flash("Choose a business to continue.", "error")
+            return redirect(url_for("businesses.select"))
 
-        # Come back to the requested page after signing in.
-        return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
+        return None
 
     @app.context_processor
     def inject_user():
         from flask import g as ctx_g
 
-        return {"current_user": getattr(ctx_g, "user", None)}
+        return {
+            "current_user": getattr(ctx_g, "user", None),
+            "current_business": getattr(ctx_g, "business", None),
+            "current_partnership": getattr(ctx_g, "partnership", None),
+            "user_businesses": getattr(ctx_g, "businesses", None) or [],
+        }
 
 
 def register_blueprints(app):
@@ -124,8 +145,10 @@ def register_blueprints(app):
     from routes.reports import reports_bp
     from routes.settings import settings_bp
     from routes.auth import auth_bp
+    from routes.businesses import businesses_bp
 
     app.register_blueprint(auth_bp)
+    app.register_blueprint(businesses_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(customers_bp)
     app.register_blueprint(products_bp)

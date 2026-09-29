@@ -1,6 +1,6 @@
 """Customer management: list, add, edit, delete, purchase history."""
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, g
 
 from extensions import db
 from models.customer import Customer
@@ -12,7 +12,7 @@ customers_bp = Blueprint("customers", __name__, url_prefix="/customers")
 @customers_bp.route("/")
 def list_customers():
     search = request.args.get("q", "").strip()
-    query = Customer.query
+    query = Customer.query.filter_by(business_id=g.business.id)
     if search:
         like = f"%{search}%"
         query = query.filter(
@@ -27,6 +27,7 @@ def add_customer():
     if request.method == "POST":
         try:
             customer = Customer(
+                business_id=g.business.id,
                 name=parse_required_text(request.form.get("name"), "Customer name", 120),
                 phone=parse_optional_text(request.form.get("phone"), 20),
                 email=parse_optional_text(request.form.get("email"), 120),
@@ -51,6 +52,7 @@ def quick_add_customer():
     """
     try:
         customer = Customer(
+            business_id=g.business.id,
             name=parse_required_text(request.form.get("name"), "Customer name", 120),
             phone=parse_optional_text(request.form.get("phone"), 20),
         )
@@ -70,7 +72,7 @@ def quick_add_customer():
 
 @customers_bp.route("/<int:customer_id>/edit", methods=["GET", "POST"])
 def edit_customer(customer_id):
-    customer = Customer.query.get_or_404(customer_id)
+    customer = Customer.query.filter_by(id=customer_id, business_id=g.business.id).first_or_404()
     if request.method == "POST":
         try:
             customer.name = parse_required_text(request.form.get("name"), "Customer name", 120)
@@ -89,7 +91,7 @@ def edit_customer(customer_id):
 
 @customers_bp.route("/<int:customer_id>/delete", methods=["POST"])
 def delete_customer(customer_id):
-    customer = Customer.query.get_or_404(customer_id)
+    customer = Customer.query.filter_by(id=customer_id, business_id=g.business.id).first_or_404()
     if customer.total_orders() > 0:
         flash(
             "This customer has existing orders and cannot be deleted. "
@@ -105,6 +107,6 @@ def delete_customer(customer_id):
 
 @customers_bp.route("/<int:customer_id>")
 def view_customer(customer_id):
-    customer = Customer.query.get_or_404(customer_id)
+    customer = Customer.query.filter_by(id=customer_id, business_id=g.business.id).first_or_404()
     orders = customer.sales.order_by(db.desc("order_date")).all()
     return render_template("customers/detail.html", customer=customer, orders=orders)
