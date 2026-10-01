@@ -12,6 +12,7 @@ from models.product import Product
 from models.sale import Sale, OrderItem
 from models.expense import Expense, ExpenseItem
 from models.expense_category import ExpenseCategory
+from models.expense_share import ExpenseShare
 from models.user import User
 
 __all__ = [
@@ -24,5 +25,6 @@ __all__ = [
     "Expense",
     "ExpenseItem",
     "ExpenseCategory",
+    "ExpenseShare",
     "User",
 ]

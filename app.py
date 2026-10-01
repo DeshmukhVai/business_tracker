@@ -144,6 +144,7 @@ def register_blueprints(app):
     from routes.payments import payments_bp
     from routes.reports import reports_bp
     from routes.settings import settings_bp
+    from routes.settlements import settlements_bp
     from routes.auth import auth_bp
     from routes.businesses import businesses_bp
 
@@ -157,6 +158,7 @@ def register_blueprints(app):
     app.register_blueprint(payments_bp)
     app.register_blueprint(reports_bp)
     app.register_blueprint(settings_bp)
+    app.register_blueprint(settlements_bp)
 
 
 def register_template_helpers(app):

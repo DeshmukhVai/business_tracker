@@ -48,10 +48,15 @@ ADDED_COLUMNS = {
         # Which partner paid — see models/expense.py for why this is a
         # user reference rather than free text.
         "paid_by_user_id": ("INTEGER", None),
-        # Whether it came out of the business's own funds instead of a
-        # partner's pocket. False for every pre-existing expense, since
-        # none of them recorded this either way.
-        "paid_from_business": ("BOOLEAN NOT NULL DEFAULT 0", None),
+        # Replaces the old all-or-nothing paid_from_business flag with a
+        # split amount, so an expense can be partly business-funded and
+        # partly personal. Expenses that had the flag set are backfilled
+        # as fully business-funded, matching what that flag used to mean;
+        # everything else defaults to 0 (fully personal, or unspecified).
+        "business_amount": (
+            "NUMERIC(10, 2) NOT NULL DEFAULT 0",
+            "UPDATE expenses SET business_amount = amount WHERE paid_from_business = 1",
+        ),
     },
 }
 

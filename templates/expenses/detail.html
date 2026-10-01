@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "partials/icons.html" as icons %}
 {% block title %}Expense #{{ expense.id }} - Business Tracker{% endblock %}
 {% block content %}
 
@@ -16,6 +17,12 @@
   <div class="detail-item"><div class="label">Category</div><div class="value">{{ expense.category }}</div></div>
   <div class="detail-item"><div class="label">Payment Method</div><div class="value">{{ expense.payment_method or '-' }}</div></div>
   <div class="detail-item"><div class="label">Paid By</div><div class="value">{{ expense.paid_by_label or '-' }}</div></div>
+  {% if expense.paid_by_user_id and expense.business_amount and expense.business_amount > 0 %}
+  <div class="detail-item">
+    <div class="label">Payment Split</div>
+    <div class="value">{{ expense.personal_amount | currency }} by {{ expense.paid_by.username }}, {{ expense.business_amount | currency }} from business</div>
+  </div>
+  {% endif %}
   <div class="detail-item"><div class="label">Items Noted</div><div class="value">{{ expense.item_count or '-' }}</div></div>
 </div>
 
@@ -45,4 +52,45 @@
   {% endif %}
   {% if expense.notes %}<p><strong>Notes:</strong> {{ expense.notes }}</p>{% endif %}
 </div>
+
+{% set shares = expense.shares.all() %}
+{% if shares %}
+<div class="panel">
+  <h3>Split Between Partners</h3>
+  <p class="page-subtitle">
+    {{ expense.personal_amount | currency }} was paid personally by {{ expense.paid_by.username }} — each other partner owes their equal share of that back.
+  </p>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Owed By</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for share in shares %}
+        <tr>
+          <td>{{ share.owed_by.username }}</td>
+          <td>{{ share.amount | currency }}</td>
+          <td>
+            {% if share.is_settled %}
+            <span class="badge badge-paid">Settled</span>
+            {% else %}
+            <span class="badge badge-pending">Pending</span>
+            {% endif %}
+          </td>
+          <td class="row-actions">
+            {% if share.is_settled %}
+            <form method="post" action="{{ url_for('settlements.unsettle', share_id=share.id) }}">
+              <button class="btn btn-secondary btn-sm" type="submit">Mark Pending</button>
+            </form>
+            {% else %}
+            <form method="post" action="{{ url_for('settlements.settle', share_id=share.id) }}">
+              <button class="btn btn-sm" type="submit">Mark Settled</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
 {% endblock %}

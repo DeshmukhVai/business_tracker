@@ -46,6 +46,7 @@
       <a href="{{ url_for('products.list_products') }}" class="{{ 'active' if request.blueprint == 'products' }}">📦 Products</a>
       <a href="{{ url_for('expenses.list_expenses') }}" class="{{ 'active' if request.blueprint == 'expenses' }}">💸 Expenses</a>
       <a href="{{ url_for('payments.list_pending') }}" class="{{ 'active' if request.blueprint == 'payments' }}">⏳ Pending Payments</a>
+      <a href="{{ url_for('settlements.index') }}" class="{{ 'active' if request.blueprint == 'settlements' }}">🤝 Settlements</a>
       <a href="{{ url_for('reports.index') }}" class="{{ 'active' if request.blueprint == 'reports' }}">📈 Reports</a>
       <a href="{{ url_for('settings.index') }}" class="{{ 'active' if request.blueprint == 'settings' }}">⚙️ Settings</a>
       <a href="{{ url_for('businesses.select') }}" class="{{ 'active' if request.endpoint == 'businesses.select' }}">🏢 Businesses</a>

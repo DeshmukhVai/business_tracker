@@ -23,6 +23,7 @@ from extensions import db
 from models.business_partner import BusinessPartner
 from models.expense import Expense, ExpenseItem
 from models.expense_category import ExpenseCategory
+from models.expense_share import ExpenseShare
 from models.user import User
 from utils.columns import selected_columns
 from utils.validators import (
@@ -60,24 +61,80 @@ def _partner_users():
     )
 
 
-def _parse_paid_by(form):
-    """Read the "Paid By" field into (paid_by_user_id, paid_from_business).
+def _parse_payment_split(form, total_amount):
+    """Read how an expense was paid into (paid_by_user_id, business_amount).
 
-    The dropdown offers three kinds of answer: a specific partner, the
-    business's own funds ("business"), or left blank. Rejects a partner
-    id that isn't actually a partner here — the dropdown only ever offers
-    valid ones, but the form field is still just text an edited request
-    could tamper with.
+    Any mix is allowed: fully personal (business_amount left at 0), fully
+    business-funded (business_amount equal to the total, no partner
+    needed), or split between the two — a partner covering part of it out
+    of pocket while the rest came from business funds.
+
+    Rejects a business_amount bigger than the total, a partner id that
+    isn't actually a partner here, and a personal remainder with no one
+    assigned to it — each is either an impossible input or a tampered
+    form field, not something the picker itself would ever produce.
     """
-    raw = (form.get("paid_by") or "").strip()
-    if not raw:
-        return None, False
-    if raw == "business":
-        return None, True
-    user_id = int(raw)
-    if not BusinessPartner.query.filter_by(business_id=g.business.id, user_id=user_id).first():
+    raw_business = form.get("business_amount")
+    business_amount = parse_amount(raw_business or 0, "Amount from business profit")
+    if business_amount > total_amount:
+        raise ValueError("Amount from business profit can't be more than the total amount.")
+
+    raw_partner = (form.get("paid_by") or "").strip()
+    paid_by_user_id = int(raw_partner) if raw_partner else None
+    if paid_by_user_id is not None and not BusinessPartner.query.filter_by(
+        business_id=g.business.id, user_id=paid_by_user_id
+    ).first():
         raise ValueError("Selected person is not a partner of this business.")
-    return user_id, False
+
+    personal_amount = round(total_amount - business_amount, 2)
+    if personal_amount > 0 and paid_by_user_id is None:
+        raise ValueError(
+            f"Select who personally paid the remaining {personal_amount:,.2f} "
+            "not covered by business profit."
+        )
+    if personal_amount <= 0:
+        paid_by_user_id = None  # nothing personal left to attribute to anyone
+
+    return paid_by_user_id, business_amount
+
+
+def _apply_expense_shares(expense):
+    """(Re)create the reimbursement rows owed to whoever paid personally.
+
+    Replaces any existing shares entirely — same pattern as the item
+    rows — so an edited amount or payment split always leaves the split
+    correct. Only the personal portion (amount minus business_amount) is
+    ever split; a fully business-funded expense, or the business-funded
+    part of a mixed one, needs no reimbursement from anyone.
+
+    The personal portion is split equally across every partner the
+    business currently has, excluding whoever paid (they already fronted
+    their own share by paying it). Two partners means the other owes
+    exactly half of that portion, which is the common case; it
+    generalises the same way to more.
+    """
+    for old_share in list(expense.shares):
+        db.session.delete(old_share)
+
+    personal_amount = round(float(expense.amount or 0) - float(expense.business_amount or 0), 2)
+    if not expense.paid_by_user_id or personal_amount <= 0:
+        return
+
+    partner_user_ids = [
+        row[0]
+        for row in db.session.query(BusinessPartner.user_id)
+        .filter_by(business_id=expense.business_id)
+        .all()
+    ]
+    owing_user_ids = [uid for uid in partner_user_ids if uid != expense.paid_by_user_id]
+    if not owing_user_ids:
+        return  # solo business, or no other partner to split with
+
+    share_amount = round(personal_amount / len(partner_user_ids), 2)
+    for uid in owing_user_ids:
+        db.session.add(
+            ExpenseShare(expense_id=expense.id, owed_by_user_id=uid, amount=share_amount)
+        )
 
 
 @expenses_bp.route("/")
@@ -198,21 +255,24 @@ def add_expense():
     if request.method == "POST":
         try:
             items = _build_expense_items(request.form)
-            paid_by_user_id, paid_from_business = _parse_paid_by(request.form)
+            amount = parse_amount(request.form.get("amount"), "Total amount", allow_zero=False)
+            paid_by_user_id, business_amount = _parse_payment_split(request.form, amount)
             expense = Expense(
                 business_id=g.business.id,
                 expense_date=parse_date(request.form.get("expense_date"), "Date"),
                 category=parse_required_text(request.form.get("category"), "Category", 50),
                 description=parse_optional_text(request.form.get("description"), 255),
-                amount=parse_amount(request.form.get("amount"), "Total amount", allow_zero=False),
+                amount=amount,
                 payment_method=parse_optional_text(request.form.get("payment_method"), 30),
                 paid_by_user_id=paid_by_user_id,
-                paid_from_business=paid_from_business,
+                business_amount=business_amount,
                 notes=parse_optional_text(request.form.get("notes")),
             )
             for item in items:
                 expense.items.append(item)
             db.session.add(expense)
+            db.session.flush()  # assigns expense.id, needed by the shares below
+            _apply_expense_shares(expense)
             db.session.commit()
             flash("Expense added.", "success")
             return redirect(url_for("expenses.list_expenses"))
@@ -240,7 +300,9 @@ def edit_expense(expense_id):
                 request.form.get("amount"), "Total amount", allow_zero=False
             )
             expense.payment_method = parse_optional_text(request.form.get("payment_method"), 30)
-            expense.paid_by_user_id, expense.paid_from_business = _parse_paid_by(request.form)
+            expense.paid_by_user_id, expense.business_amount = _parse_payment_split(
+                request.form, float(expense.amount)
+            )
             expense.notes = parse_optional_text(request.form.get("notes"))
 
             # Replace the item rows entirely with the submitted set, the
@@ -250,6 +312,7 @@ def edit_expense(expense_id):
             for item in items:
                 expense.items.append(item)
 
+            _apply_expense_shares(expense)
             db.session.commit()
             flash("Expense updated.", "success")
             return redirect(url_for("expenses.list_expenses"))

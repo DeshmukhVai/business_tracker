@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% import "partials/icons.html" as icons %}
+{% block title %}Settlements - Business Tracker{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Settlements</h1>
+    <div class="page-subtitle">
+      Who owes whom, for expenses a partner paid out of their own pocket.
+      Total outstanding: {{ total_outstanding | currency }}
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <h3>Balances</h3>
+  {% if balances %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Who Owes</th><th>Who To</th><th>Amount</th></tr>
+      </thead>
+      <tbody>
+        {% for row in balances %}
+        <tr>
+          <td>{{ row.ower.username }}</td>
+          <td>{{ row.payer.username }}</td>
+          <td>{{ row.amount | currency }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">Nothing outstanding — every split expense is settled up.</div>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <div class="panel-header">
+    <h3>Expense-by-Expense</h3>
+    {% if show_settled %}
+    <a href="{{ url_for('settlements.index') }}" class="btn btn-secondary btn-sm">Hide settled</a>
+    {% else %}
+    <a href="{{ url_for('settlements.index', show_settled=1) }}" class="btn btn-secondary btn-sm">Show settled too</a>
+    {% endif %}
+  </div>
+  {% if shares %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Expense</th><th>Date</th><th>Paid By</th><th>Owed By</th><th>Amount</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for share in shares %}
+        <tr>
+          <td><a href="{{ url_for('expenses.view_expense', expense_id=share.expense_id) }}">{{ share.expense.description or share.expense.category }}</a></td>
+          <td>{{ share.expense.expense_date }}</td>
+          <td>{{ share.expense.paid_by.username if share.expense.paid_by else '-' }}</td>
+          <td>{{ share.owed_by.username }}</td>
+          <td>{{ share.amount | currency }}</td>
+          <td>
+            {% if share.is_settled %}
+            <span class="badge badge-paid">Settled</span>
+            {% else %}
+            <span class="badge badge-pending">Pending</span>
+            {% endif %}
+          </td>
+          <td class="row-actions">
+            {% if share.is_settled %}
+            <form method="post" action="{{ url_for('settlements.unsettle', share_id=share.id) }}">
+              <button class="btn btn-secondary btn-sm" type="submit">Mark Pending</button>
+            </form>
+            {% else %}
+            <form method="post" action="{{ url_for('settlements.settle', share_id=share.id) }}">
+              <button class="btn btn-sm" type="submit">Mark Settled</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    No split expenses yet. Recording an expense with "Paid By" set to a specific partner
+    will split it equally among the others here.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

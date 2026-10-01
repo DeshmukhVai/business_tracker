@@ -25,6 +25,7 @@ from models.business_partner import BusinessPartner, ROLE_OWNER, ROLE_PARTNER, R
 from models.customer import Customer
 from models.expense import Expense, ExpenseItem
 from models.expense_category import ExpenseCategory
+from models.expense_share import ExpenseShare
 from models.product import Product
 from models.sale import Sale, OrderItem
 from models.user import User, MIN_PASSWORD_LENGTH
@@ -310,6 +311,9 @@ def delete():
 
     ExpenseItem.query.filter(
         ExpenseItem.expense_id.in_(db.session.query(Expense.id).filter_by(business_id=business_id))
+    ).delete(synchronize_session=False)
+    ExpenseShare.query.filter(
+        ExpenseShare.expense_id.in_(db.session.query(Expense.id).filter_by(business_id=business_id))
     ).delete(synchronize_session=False)
     Expense.query.filter_by(business_id=business_id).delete(synchronize_session=False)
 
