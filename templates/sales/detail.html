@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Order #{{ sale.id }} - Business Tracker{% endblock %}
+{% block title %}Order #{{ sale.order_number }} - Business Tracker{% endblock %}
 {% block content %}
 
 <div class="page-header">
   <div>
     <a href="{{ url_for('sales.list_sales') }}" class="back-link">&larr; All Sales</a>
-    <h1>Order #{{ sale.id }}</h1>
+    <h1>Order #{{ sale.order_number }}</h1>
     <div class="page-subtitle">{{ sale.order_date }} · {{ sale.customer.name if sale.customer }}</div>
   </div>
   <a href="{{ url_for('sales.edit_sale', sale_id=sale.id) }}" class="btn btn-secondary">Edit</a>

@@ -35,6 +35,9 @@ ADDED_COLUMNS = {
             "UPDATE sales SET delivery_status = 'Pending' WHERE delivery_status IS NULL",
         ),
         "business_id": ("INTEGER", None),
+        # Per-business order number — see ensure_order_numbers() below for
+        # why this needs real backfill logic rather than a one-line UPDATE.
+        "order_number": ("INTEGER", None),
     },
     # Multi-business support: every business-owned table gets a nullable
     # business_id column added here, then backfilled onto a "Default
@@ -196,3 +199,49 @@ def ensure_default_business(db):
             )
 
     return default_business.name
+
+
+def ensure_order_numbers(db):
+    """Give every sale a per-business order number.
+
+    Order numbers used to just be the sale's database id, which is one
+    sequence shared by every business — fine for a single business, but
+    it meant a second business's very first order could show up as "#13"
+    just because 12 other orders happened to be created first elsewhere.
+
+    Runs once, only when some sale still has no order_number (a brand new
+    install never hits this, since every sale is created with one
+    already). Numbers each business's sales 1, 2, 3... in the order they
+    were created (by id) — idempotent, so re-running it changes nothing.
+    """
+    with db.engine.connect() as connection:
+        if not _table_exists(connection, "sales"):
+            return False
+        row = connection.execute(
+            text("SELECT 1 FROM sales WHERE order_number IS NULL LIMIT 1")
+        ).fetchone()
+        if row is None:
+            return False
+
+        business_ids = [
+            r[0]
+            for r in connection.execute(
+                text("SELECT DISTINCT business_id FROM sales")
+            ).fetchall()
+        ]
+
+    with db.engine.begin() as connection:
+        for business_id in business_ids:
+            sale_ids = [
+                r[0]
+                for r in connection.execute(
+                    text("SELECT id FROM sales WHERE business_id = :bid ORDER BY id"),
+                    {"bid": business_id},
+                ).fetchall()
+            ]
+            for number, sale_id in enumerate(sale_ids, start=1):
+                connection.execute(
+                    text("UPDATE sales SET order_number = :n WHERE id = :sid"),
+                    {"n": number, "sid": sale_id},
+                )
+    return True

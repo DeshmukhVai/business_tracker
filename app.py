@@ -66,6 +66,7 @@ def create_app(config_name=None):
             ensure_columns,
             migrate_expense_categories_table,
             ensure_default_business,
+            ensure_order_numbers,
         )
 
         # Must run before ensure_columns()/ensure_default_business() touch
@@ -83,6 +84,12 @@ def create_app(config_name=None):
             app.logger.info(
                 "Created '%s' to hold pre-existing data", default_business_name
             )
+
+        # Needs every sale's business_id already resolved (just above), so
+        # it numbers each business's orders 1, 2, 3... instead of sharing
+        # one sequence across all of them.
+        if ensure_order_numbers(db):
+            app.logger.info("Backfilled per-business order numbers")
 
     return app
 

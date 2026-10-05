@@ -39,7 +39,7 @@
         {% for order in orders %}
         <tr>
           <td>{{ order.order_date }}</td>
-          <td><a href="{{ url_for('sales.view_sale', sale_id=order.id) }}">#{{ order.id }}</a></td>
+          <td><a href="{{ url_for('sales.view_sale', sale_id=order.id) }}">#{{ order.order_number }}</a></td>
           <td>{{ order.total_amount | currency }}</td>
           <td>{{ order.amount_paid | currency }}</td>
           <td>{{ order.remaining_amount | currency }}</td>

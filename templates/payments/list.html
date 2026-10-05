@@ -26,7 +26,7 @@
         {% for s in sales %}
         <tr>
           <td>{{ s.customer.name if s.customer else '-' }}</td>
-          <td><a href="{{ url_for('sales.view_sale', sale_id=s.id) }}">#{{ s.id }}</a></td>
+          <td><a href="{{ url_for('sales.view_sale', sale_id=s.id) }}">#{{ s.order_number }}</a></td>
           <td>{{ s.order_date }}</td>
           <td>{{ s.total_amount | currency }}</td>
           <td>{{ s.amount_paid | currency }}</td>

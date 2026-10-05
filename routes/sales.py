@@ -219,6 +219,7 @@ def add_sale():
 
             sale = Sale(
                 business_id=g.business.id,
+                order_number=Sale.next_order_number(g.business.id),
                 customer_id=customer_id,
                 order_date=order_date,
                 delivery_date=delivery_date,
@@ -334,7 +335,7 @@ def mark_delivered(sale_id):
         # Nothing was promised in advance, so record today as the day it went.
         sale.delivery_date = date.today()
     db.session.commit()
-    flash(f"Order #{sale.id} marked as delivered.", "success")
+    flash(f"Order #{sale.order_number} marked as delivered.", "success")
     return redirect(request.referrer or url_for("sales.list_sales"))
 
 

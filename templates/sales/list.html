@@ -50,7 +50,7 @@
           <td>{{ s.order_date }}</td>
           {# Linked so the order stays reachable without a mouse, now that
              the View button has gone. #}
-          <td><a href="{{ url_for('sales.view_sale', sale_id=s.id) }}">#{{ s.id }}</a></td>
+          <td><a href="{{ url_for('sales.view_sale', sale_id=s.id) }}">#{{ s.order_number }}</a></td>
           <td>{{ s.customer.name if s.customer else '-' }}</td>
           <td>{{ s.items.count() }} item(s)</td>
           <td>{{ s.total_amount | currency }}</td>
@@ -74,11 +74,11 @@
           <td class="row-actions">
             {% if not s.is_delivered %}
             <form method="post" action="{{ url_for('sales.mark_delivered', sale_id=s.id) }}">
-              {{ icons.deliver_button("Mark order #" ~ s.id ~ " delivered") }}
+              {{ icons.deliver_button("Mark order #" ~ s.order_number ~ " delivered") }}
             </form>
             {% endif %}
             <form method="post" action="{{ url_for('sales.delete_sale', sale_id=s.id) }}" data-confirm="Delete this order?">
-              {{ icons.delete_button("Delete order #" ~ s.id) }}
+              {{ icons.delete_button("Delete order #" ~ s.order_number) }}
             </form>
           </td>
         </tr>

@@ -44,7 +44,7 @@ with app.app_context():
         db.session.add_all([bouquet, cake])
         db.session.flush()
 
-        sale1 = Sale(business_id=bid, customer_id=priya.id, order_date=date.today() - timedelta(days=2), payment_method="UPI")
+        sale1 = Sale(business_id=bid, order_number=1, customer_id=priya.id, order_date=date.today() - timedelta(days=2), payment_method="UPI")
         item1 = OrderItem(product_id=bouquet.id, quantity=2, selling_price=bouquet.selling_price, cost_price=bouquet.cost_price)
         item1.compute_subtotal()
         sale1.items.append(item1)
@@ -52,7 +52,7 @@ with app.app_context():
         sale1.amount_paid = 1500
         sale1.recompute_payment_status()
 
-        sale2 = Sale(business_id=bid, customer_id=rahul.id, order_date=date.today() - timedelta(days=1), payment_method="Cash")
+        sale2 = Sale(business_id=bid, order_number=2, customer_id=rahul.id, order_date=date.today() - timedelta(days=1), payment_method="Cash")
         item2 = OrderItem(product_id=cake.id, quantity=1, selling_price=cake.selling_price, cost_price=cake.cost_price)
         item2.compute_subtotal()
         sale2.items.append(item2)

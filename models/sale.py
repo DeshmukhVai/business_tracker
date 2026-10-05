@@ -29,6 +29,12 @@ class Sale(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     business_id = db.Column(db.Integer, db.ForeignKey("businesses.id"), nullable=False)
+    # The order number shown on screen ("#1", "#2", ...) — one sequence
+    # per business, set when the sale is created. `id` is a single
+    # sequence shared by every business in the database, so a business's
+    # very first order could otherwise display as "#13" just because 12
+    # other businesses' orders happened to be created first.
+    order_number = db.Column(db.Integer, nullable=False)
     customer_id = db.Column(db.Integer, db.ForeignKey("customers.id"), nullable=False)
     order_date = db.Column(db.Date, nullable=False, default=date.today)
     total_amount = db.Column(db.Numeric(10, 2), nullable=False, default=0)
@@ -146,8 +152,18 @@ class Sale(db.Model):
         self.discount = self.compute_discount(items_total)
         self.total_amount = round(max(items_total - float(self.discount), 0), 2)
 
+    @staticmethod
+    def next_order_number(business_id):
+        """One more than this business's highest order number so far."""
+        highest = (
+            db.session.query(db.func.max(Sale.order_number))
+            .filter_by(business_id=business_id)
+            .scalar()
+        )
+        return (highest or 0) + 1
+
     def __repr__(self):
-        return f"<Sale #{self.id} customer={self.customer_id}>"
+        return f"<Sale #{self.order_number} customer={self.customer_id}>"
 
 
 class OrderItem(db.Model):
