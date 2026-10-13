@@ -45,7 +45,24 @@ ADDED_COLUMNS = {
     # constraint isn't added since SQLite can't do that without rebuilding
     # the table, and application code always sets it on new rows anyway.
     "customers": {"business_id": ("INTEGER", None)},
-    "products": {"business_id": ("INTEGER", None)},
+    "products": {
+        "business_id": ("INTEGER", None),
+        # Pre-existing products get 0 on hand rather than guessing —
+        # there's no way to know what they actually had in stock before
+        # this feature existed.
+        "stock_quantity": ("INTEGER NOT NULL DEFAULT 0", None),
+    },
+    "order_items": {
+        # 0 for every pre-existing order line: assume stock covered it at
+        # the time, since there's no way to know otherwise in hindsight.
+        "pending_quantity": ("INTEGER NOT NULL DEFAULT 0", None),
+        # False for every pre-existing order line: stock tracking didn't
+        # exist yet when they were placed, so none of them ever really
+        # took stock away from a product. Without this, deleting one of
+        # those old orders would incorrectly hand stock back that was
+        # never actually taken in the first place.
+        "stock_deducted": ("BOOLEAN NOT NULL DEFAULT 0", None),
+    },
     "expenses": {
         "business_id": ("INTEGER", None),
         # Which partner paid — see models/expense.py for why this is a

@@ -178,6 +178,16 @@ class OrderItem(db.Model):
     selling_price = db.Column(db.Numeric(10, 2), nullable=False, default=0)
     cost_price = db.Column(db.Numeric(10, 2), nullable=False, default=0)
     subtotal = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+    # How many of `quantity` the product's stock couldn't cover when this
+    # order was recorded — set once at order time (see routes/sales.py),
+    # not re-checked later. 0 means stock covered it in full.
+    pending_quantity = db.Column(db.Integer, nullable=False, default=0)
+    # Whether this line actually took stock away from its product at the
+    # time it was recorded. False for every order placed before stock
+    # tracking existed — editing or deleting one of those must NOT give
+    # stock back, since nothing was ever really deducted for it. New
+    # order lines always set this True (see routes/sales.py).
+    stock_deducted = db.Column(db.Boolean, nullable=False, default=False)
 
     sale = db.relationship("Sale", back_populates="items")
     product = db.relationship("Product", back_populates="order_items")

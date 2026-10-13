@@ -153,7 +153,15 @@ def _apply_discount(sale, form, items):
 
 
 def _build_order_items(sale, form):
-    """Parse the (possibly multi-row) product line items from the form."""
+    """Parse the (possibly multi-row) product line items from the form.
+
+    Each line also deducts from the product's current stock right here,
+    while `product` is already in hand — whatever stock can't cover is
+    recorded as pending rather than blocking the sale. Call
+    _release_stock_for_items() on whatever items this is replacing
+    *before* calling this, or the stock this consumes will be on top of
+    what the old items already took, not instead of it.
+    """
     product_ids = form.getlist("product_id[]")
     quantities = form.getlist("quantity[]")
     prices = form.getlist("selling_price[]")
@@ -173,17 +181,43 @@ def _build_order_items(sale, form):
         selling_price = parse_amount(raw_price, "Selling price")
 
         item = OrderItem(
-            product_id=product.id,
+            product=product,
             quantity=quantity,
             selling_price=selling_price,
             cost_price=product.cost_price,
+            stock_deducted=True,
         )
         item.compute_subtotal()
+
+        fulfilled = min(quantity, product.stock_quantity)
+        item.pending_quantity = quantity - fulfilled
+        product.stock_quantity -= fulfilled
+
         items.append(item)
 
     if not items:
         raise ValueError("Add at least one product to the order.")
     return items
+
+
+def _release_stock_for_items(items):
+    """Put back whatever stock these order items had actually consumed.
+
+    Called before replacing or deleting a sale's items, so editing or
+    cancelling an order doesn't permanently lose the stock it used —
+    without this, re-saving an unchanged order would consume its stock
+    a second time on top of the first.
+
+    Skips anything with stock_deducted False — an order placed before
+    stock tracking existed never really took stock away from its
+    product, so deleting or editing it must not hand stock back either.
+    """
+    for item in items:
+        if not item.stock_deducted:
+            continue
+        fulfilled = item.quantity - item.pending_quantity
+        if fulfilled and item.product:
+            item.product.stock_quantity += fulfilled
 
 
 def _require_own_customer(customer_id):
@@ -279,8 +313,12 @@ def edit_sale(sale_id):
             sale.payment_method = parse_optional_text(request.form.get("payment_method"), 30)
             sale.notes = parse_optional_text(request.form.get("notes"))
 
-            # Replace line items entirely with the submitted set.
-            for item in list(sale.items):
+            # Replace line items entirely with the submitted set — give
+            # back the stock the old ones consumed first, or the new
+            # build would deduct on top of that instead of replacing it.
+            old_items = list(sale.items)
+            _release_stock_for_items(old_items)
+            for item in old_items:
                 db.session.delete(item)
             new_items = _build_order_items(sale, request.form)
             for item in new_items:
@@ -314,6 +352,7 @@ def edit_sale(sale_id):
 @sales_bp.route("/<int:sale_id>/delete", methods=["POST"])
 def delete_sale(sale_id):
     sale = Sale.query.filter_by(id=sale_id, business_id=g.business.id).first_or_404()
+    _release_stock_for_items(list(sale.items))
     db.session.delete(sale)
     db.session.commit()
     flash("Sale deleted.", "success")

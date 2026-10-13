@@ -33,6 +33,8 @@
           <th>Selling Price</th>
           {% if 'cost_price' in shown_columns %}<th>Cost Price</th>{% endif %}
           {% if 'profit' in shown_columns %}<th>Profit/Item</th>{% endif %}
+          <th>Stock Qty</th>
+          <th>Pending Qty</th>
           <th>Status</th>
           <th>Actions</th>
         </tr>
@@ -48,6 +50,12 @@
           <td>{{ p.selling_price | currency }}</td>
           {% if 'cost_price' in shown_columns %}<td>{{ p.cost_price | currency }}</td>{% endif %}
           {% if 'profit' in shown_columns %}<td>{{ p.profit_per_item | currency }}</td>{% endif %}
+          <td>{{ p.stock_quantity }}</td>
+          <td>
+            {% if p.pending_stock_quantity > 0 %}
+            <span class="badge badge-pending">{{ p.pending_stock_quantity }}</span>
+            {% else %}0{% endif %}
+          </td>
           <td>
             {% if p.is_active %}<span class="badge badge-paid">Active</span>
             {% else %}<span class="badge badge-pending">Inactive</span>{% endif %}

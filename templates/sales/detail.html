@@ -51,7 +51,7 @@
   <h3>Items</h3>
   <div class="table-wrap">
     <table class="data-table">
-      <thead><tr><th>Product</th><th>Quantity</th><th>Selling Price</th><th>Subtotal</th></tr></thead>
+      <thead><tr><th>Product</th><th>Quantity</th><th>Selling Price</th><th>Subtotal</th><th>Stock</th></tr></thead>
       <tbody>
         {% for item in sale.items %}
         <tr>
@@ -59,6 +59,13 @@
           <td>{{ item.quantity }}</td>
           <td>{{ item.selling_price | currency }}</td>
           <td>{{ item.subtotal | currency }}</td>
+          <td>
+            {% if item.pending_quantity > 0 %}
+            <span class="badge badge-pending">{{ item.pending_quantity }} pending</span>
+            {% else %}
+            <span class="badge badge-paid">In stock</span>
+            {% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>

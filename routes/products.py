@@ -5,13 +5,13 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from extensions import db
 from models.product import Product
 from utils.columns import selected_columns
-from utils.validators import parse_amount, parse_required_text, parse_optional_text
+from utils.validators import parse_amount, parse_positive_int, parse_required_text, parse_optional_text
 
 products_bp = Blueprint("products", __name__, url_prefix="/products")
 
 # Name, selling price, status and actions are what the list is for at a
 # glance; the costing detail is opt-in from the Columns menu.
-FIXED_COLUMNS = ["Name", "Selling Price", "Status", "Actions"]
+FIXED_COLUMNS = ["Name", "Selling Price", "Stock Qty", "Pending Qty", "Status", "Actions"]
 OPTIONAL_COLUMNS = [
     ("category", "Category"),
     ("cost_price", "Cost Price"),
@@ -47,12 +47,16 @@ def add_product():
         try:
             selling_price = parse_amount(request.form.get("selling_price"), "Selling price")
             cost_price = parse_amount(request.form.get("cost_price"), "Cost price")
+            stock_quantity = parse_positive_int(
+                request.form.get("stock_quantity") or 0, "Stock quantity", minimum=0
+            )
             product = Product(
                 business_id=g.business.id,
                 name=parse_required_text(request.form.get("name"), "Product name", 120),
                 category=parse_optional_text(request.form.get("category"), 80),
                 selling_price=selling_price,
                 cost_price=cost_price,
+                stock_quantity=stock_quantity,
                 description=parse_optional_text(request.form.get("description")),
                 is_active=True,
             )
@@ -110,6 +114,9 @@ def edit_product(product_id):
             product.category = parse_optional_text(request.form.get("category"), 80)
             product.selling_price = parse_amount(request.form.get("selling_price"), "Selling price")
             product.cost_price = parse_amount(request.form.get("cost_price"), "Cost price")
+            product.stock_quantity = parse_positive_int(
+                request.form.get("stock_quantity") or 0, "Stock quantity", minimum=0
+            )
             product.description = parse_optional_text(request.form.get("description"))
             product.is_active = request.form.get("is_active") == "on"
             db.session.commit()
